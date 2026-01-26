@@ -1,0 +1,35 @@
+﻿::deep .nav-tabs {
+    border-bottom: 2px solid var(--primary);
+    gap: 4px;
+}
+
+    ::deep .nav-tabs .nav-link {
+        color: var(--primary);
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-bottom: none; 
+        border-radius: 6px 6px 0 0; 
+        font-size: var(--font-size);
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+        ::deep .nav-tabs .nav-link:hover {
+            background-color: var(--primary-75);
+            color: var(--font-secondary);
+            border-color: var(--primary);
+            border-bottom: none;
+        }
+
+        ::deep .nav-tabs .nav-link.active {
+            background-color: var(--primary-75);
+            color: var(--font-secondary);
+            border-color: var(--primary);
+            border-bottom-color: var(--primary-75); 
+        }
+
+        ::deep .nav-tabs .nav-link:focus {
+            outline: none;
+            box-shadow: none;
+        }

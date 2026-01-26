@@ -1,0 +1,149 @@
+﻿@page "/panel/kosz"
+@using BibliotekaSzkolnaAI.Shared.DataTransferObjects.Bin
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>Kosz</PageTitle>
+
+<div class="card-header  bg-gradient ml-0 py-3">
+    <div class="card-header bg-theme bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom py-2">Kosz</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <SfGrid @ref="Grid" DataSource="@DeletedItems" AllowPaging="true" AllowSorting="true" AllowFiltering="true" Height="500">
+            <GridPageSettings PageSize="15"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+            <GridColumns>
+                <GridColumn Field=@nameof(DeletedItemDto.Type) HeaderText="Typ" Width="120" TextAlign="TextAlign.Center">
+                    <Template>
+                        @{
+                            var item = (context as DeletedItemDto);
+                            <span class="@GetTypeBadge(item.Type)">@item.Type</span>
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(DeletedItemDto.DisplayName) HeaderText="Nazwa / Tytuł" Width="250"></GridColumn>
+
+                <GridColumn Field=@nameof(DeletedItemDto.Details) HeaderText="Szczegóły" Width="300"></GridColumn>
+
+                <GridColumn Field=@nameof(DeletedItemDto.DeletedAt) HeaderText="Usunięto" Format="g" Type="ColumnType.DateTime" Width="150" TextAlign="TextAlign.Center"></GridColumn>
+
+                <GridColumn HeaderText="Akcje" Width="180" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var item = (context as DeletedItemDto);
+                            <div class="d-flex justify-content-center gap-2">
+                                <button class="btn btn-outline-success btn-sm" @onclick="() => RestoreItem(item)" title="Przywróć">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+
+                                <AuthorizeView Roles="Admin" Context="authContext">
+                                    <Authorized>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => HardDeleteItem(item)" title="Usuń trwale">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </div>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+@code {
+    private List<DeletedItemDto> DeletedItems = new();
+    private SfGrid<DeletedItemDto>? Grid;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBin();
+    }
+
+    private async Task LoadBin()
+    {
+        try
+        {
+            DeletedItems = await Http.GetFromJsonAsync<List<DeletedItemDto>>("api/management/bin") ?? new();
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+    }
+
+    private async Task RestoreItem(DeletedItemDto? item)
+    {
+        bool confirmed = await UI.ConfirmAsync("Przywracanie", $"Czy na pewno chcesz przywrócić: {item.DisplayName}?");
+        if (!confirmed) return;
+
+        var dto = new RestoreItemDto { Id = item.Id, Type = item.Type };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/management/bin/restore", dto);
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Element przywrócony.", "success");
+                await LoadBin();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się przywrócić: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Błąd połączenia.");
+        }
+    }
+
+    private string GetTypeBadge(string type) => type switch
+    {
+        "Książka" => "badge bg-primary",
+        "Egzemplarz" => "badge bg-info text-dark",
+        "Użytkownik" => "badge bg-warning text-dark",
+        _ => "badge bg-secondary"
+    };
+
+    private async Task HardDeleteItem(DeletedItemDto? item)
+    {
+        bool confirmed = await UI.ConfirmAsync("TRWAŁE usunięcie", $"UWAGA! Czy na pewno chcesz TRWALE usunąć: {item.DisplayName}? Tej operacji nie można cofnąć!");
+        if (!confirmed) return;
+
+        var dto = new RestoreItemDto { Id = item.Id, Type = item.Type };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/management/bin/hard-delete", dto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Element został trwale usunięty z bazy danych..", "success");
+                await LoadBin();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Wystąpił błąd podczas usuwania: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Błąd połączenia.");
+        }
+    }
+
+    public class ProblemDetails { public string? Detail { get; set; } }
+}

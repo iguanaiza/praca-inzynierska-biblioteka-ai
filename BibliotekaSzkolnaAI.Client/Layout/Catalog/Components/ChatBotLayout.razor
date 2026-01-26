@@ -1,0 +1,254 @@
+﻿@using System.Text.RegularExpressions
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<div class="chatbot-container" @onclick:stopPropagation>
+
+    <button class="chat-icon"
+            aria-label="Otwórz czat pomocy"
+            @onclick="ToggleChat"
+            @ref="chatTriggerButton">
+
+        <span aria-hidden="true">💬</span>
+    </button>
+
+    @if (IsOpen)
+    {
+        <div class="chat-window"
+             role="dialog"
+             aria-labelledby="chat-title"
+             @onclick:stopPropagation>
+
+            <div class="chat-header">
+                <span id="chat-title">🤖 Asystent AI</span>
+
+                <button class="close-btn" @onclick="ToggleChat" aria-label="Zamknij czat">
+                    <span aria-hidden="true">X</span>
+                </button>
+            </div>
+
+            <div class="chat-messages"
+                 aria-live="polite"
+                 @ref="messagesContainer">
+
+                @foreach (var message in Messages)
+                {
+                    <div class="chat-message-wrapper @(message.IsUser ? "user" : "bot")">
+                        @if (!message.IsUser)
+                        {
+                            <div class="chat-icon-bubble" title="Bot" aria-hidden="true">🤖</div>
+                        }
+
+                        <div class="chat-message @(message.IsUser ? "user" : "bot")">
+
+                            <span class="visually-hidden">@(message.IsUser ? "Ty" : "Asystent")</span>
+
+                            @if (message.IsHtml)
+                            {
+                                @((MarkupString)message.Text)
+                            }
+                            else
+                            {
+                                @message.Text
+                            }
+                        </div>
+
+                        @if (message.IsUser)
+                        {
+                            <div class="chat-icon-bubble" title="User" aria-hidden="true">🙂</div>
+                        }
+                    </div>
+                }
+
+                @if (IsThinking)
+                {
+                    <div class="chat-message-wrapper bot">
+                        <div class="chat-icon-bubble" title="Bot" aria-hidden="true">🤖</div>
+                        <div class="chat-message bot">
+                            <div class="typing-indicator">
+                                <span class="typing-dot"></span>
+                                <span class="typing-dot"></span>
+                                <span class="typing-dot"></span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="chat-input">
+                <label for="chat-input-field" class="visually-hidden">Wpisz wiadomość</label>
+
+                <input id="chat-input-field"
+                       type="text"
+                       @bind="UserInput" @bind:event="oninput"
+                       placeholder="Wpisz wiadomość..."
+                       @onkeydown="HandleKeyDown"
+                       @ref="inputElement"
+                       disabled="@IsThinking" />
+
+                <button @onclick="SendMessage" disabled="@(string.IsNullOrWhiteSpace(UserInput) || IsThinking)">Wyślij</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    #region properties
+    private bool IsOpen = false;
+    private bool IsThinking = false;
+    private string UserInput = string.Empty;
+    private string? CurrentThreadId = null;
+    private List<ChatMessage> Messages = new()
+    {
+        new ChatMessage { Text = "Cześć! Jestem inteligentnym asystentem. Jak mogę Ci pomóc? 📚", IsUser = false }
+    };
+    private ElementReference chatTriggerButton;
+    private ElementReference inputElement;
+    private ElementReference messagesContainer;
+    #endregion
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+
+    private async Task ToggleChat()
+    {
+        IsOpen = !IsOpen;
+
+        if (IsOpen)
+        {
+            await ScrollToBottomAsync();
+            await Task.Delay(50);
+
+            if (inputElement.Context != null) await inputElement.FocusAsync();
+        }
+        else
+        {
+            await Task.Delay(50);
+            if (chatTriggerButton.Context != null) await chatTriggerButton.FocusAsync();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(UserInput))
+            return;
+
+        var rawText = UserInput.Trim();
+        UserInput = string.Empty;
+        var formattedText = ParseMarkdownToHtml(rawText);
+
+        Messages.Add(new ChatMessage
+        {
+            Text = formattedText,
+            IsUser = true,
+            IsHtml = true
+        });
+
+        IsThinking = true;
+        await InvokeAsync(StateHasChanged);
+        await ScrollToBottomAsync();
+
+        try
+        {
+            var requestDto = new ChatRequestDto
+            {
+                Message = rawText,
+                ThreadId = CurrentThreadId
+            };
+
+            var response = await Http.PostAsJsonAsync("api/chat", requestDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ChatResponseDto>();
+
+                if (result != null && result.IsSuccess)
+                {
+                    CurrentThreadId = result.ThreadId;
+
+                    Messages.Add(new ChatMessage
+                    {
+                        Text = ParseMarkdownToHtml(result.Response),
+                        IsUser = false,
+                        IsHtml = true
+                    });
+                }
+                else
+                {
+                    Messages.Add(new ChatMessage
+                    {
+                        Text = $"⚠️ Błąd: {result?.ErrorMessage ?? "Nieznany błąd"}",
+                        IsUser = false,
+                        IsHtml = false
+                    });
+                }
+            }
+            else
+            {
+                Messages.Add(new ChatMessage { Text = "⚠️ Błąd połączenia z serwerem.", IsUser = false });
+            }
+        }
+        catch (Exception ex)
+        {
+            Messages.Add(new ChatMessage { Text = $"⚠️ Wystąpił błąd: {ex.Message}", IsUser = false });
+        }
+        finally
+        {
+            IsThinking = false;
+            await InvokeAsync(StateHasChanged);
+            await ScrollToBottomAsync();
+            if (inputElement.Context != null) await inputElement.FocusAsync();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(UserInput) && !IsThinking)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await Task.Delay(50);
+        await JS.InvokeVoidAsync("scrollToBottom", messagesContainer);
+    }
+
+    private string ParseMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return "";
+
+        var html = markdown
+            .Replace("\n", "<br />")
+            .Replace("**", "<b>");
+
+        html = Regex.Replace(html, @"\[(.*?)\]\((.*?)\)", m =>
+        {
+            var text = m.Groups[1].Value;
+            var url = m.Groups[2].Value;
+            return $"<a href=\"{url}\" class=\"chat-link\">{text}</a>";
+        });
+
+        html = Regex.Replace(html, @"(?<!href=[""'])(https?:\/\/[^\s<]+)", m =>
+        {
+        return $"<a href=\"{m.Value}\" target=\"_blank\" class=\"chat-link\">{m.Value}</a>";
+        });
+
+        html = html.Replace("`", "<code>");
+
+        return html;
+    }
+
+    public class ChatMessage
+    {
+        public string Text { get; set; } = string.Empty;
+        public bool IsUser { get; set; }
+        public bool IsHtml { get; set; } = false;
+    }
+}

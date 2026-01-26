@@ -1,0 +1,133 @@
+﻿@page "/panel/zasoby/podreczniki"
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Lista lektur</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie listy" />
+        <p><em>Ładowanie listy...</em></p>
+    </div>
+}
+else
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom">Lista podręczników</h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+
+            <SfGrid @ref="Grid"
+                    DataSource="@TextBooks"
+                    TValue="BookGetForListDto"
+                    AllowPaging="true"
+                    AllowSorting="true"
+                    AllowFiltering="true"
+                    Height="500">
+
+                <GridPageSettings PageSize="10" PageSizes="@(new int[] { 10, 20, 50, 100 })"></GridPageSettings>
+
+                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+                <GridColumns>
+                    <GridColumn HeaderText="Szczegóły" Width="80" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                        <Template>
+                            @{
+                                var book = (context as BookGetForListDto);
+                                <a href="/panel/zasoby/podreczniki/szczegoly/@book.Id?returnUrl=/panel/zasoby/podreczniki"
+                                   class="btn btn-outline-primary btn-sm"
+                                   title="Szczegóły">
+                                    <i class="bi bi-info-square"></i>
+                                </a>
+                            }
+                        </Template>
+                    </GridColumn>
+
+                    <GridColumn Field=@nameof(BookGetForListDto.Class) HeaderText="Klasa" Width="100" TextAlign="TextAlign.Center"></GridColumn>
+
+                    <GridColumn Field=@nameof(BookGetForListDto.BookAuthor) HeaderText="Autor" Width="200"></GridColumn>
+
+                    <GridColumn Field=@nameof(BookGetForListDto.Title) HeaderText="Tytuł"></GridColumn>
+
+                    <GridColumn Field=@nameof(BookGetForListDto.BookPublisher) HeaderText="Wydawca" Width="150"></GridColumn>
+
+                    <GridColumn Field=@nameof(BookGetForListDto.AvailableCopyCount) HeaderText="Dostępnych" Width="130" TextAlign="TextAlign.Center">
+                        <Template>
+                            @{
+                                var book = (context as BookGetForListDto);
+                                if (book.AvailableCopyCount > 0)
+                                {
+                                    <span class="badge bg-success">@book.AvailableCopyCount</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">0</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+
+            @if (IsLoading)
+            {
+                <div class="text-center mt-3">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Ładowanie danych...</p>
+                </div>
+            }
+            else if (TextBooks.Count == 0)
+            {
+                <div class="alert alert-info mt-3 text-center">
+                    Brak lektur do wyświetlenia.
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    public List<BookGetForListDto> TextBooks { get; set; } = new();
+
+    private SfGrid<BookGetForListDto> Grid;
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<BookGetForListDto>>("api/catalog/textbooks");
+
+            if (result != null)
+            {
+                TextBooks = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd pobierania lektur: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

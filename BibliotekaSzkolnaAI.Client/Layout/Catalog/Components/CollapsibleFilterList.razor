@@ -1,0 +1,70 @@
+﻿@if (Items is not null && Items.Any())
+{
+    <div class="mb-4">
+        <h6 class="fw-bold theme-font-col-pri mb-2">@Title</h6>
+
+        <div class="filter-group">
+            @foreach (var item in GetVisibleItems())
+            {
+                <div class="form-check my-1">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="@($"{Prefix}_{item.GetHashCode()}")"
+                           checked="@SelectedItems.Contains(item)"
+                           @onchange="() => ToggleSelection(item)" />
+
+                    <label class="form-check-label small theme-font-col-pri"
+                           for="@($"{Prefix}_{item.GetHashCode()}")">
+                        @item
+                    </label>
+                </div>
+            }
+        </div>
+
+        @if (Items.Count > MaxVisibleCount)
+        {
+            <button class="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
+                    style="font-size: 0.85rem;"
+                    @onclick="() => isExpanded = !isExpanded">
+                @if (isExpanded)
+                {
+                    <span><i class="bi bi-chevron-up"></i> Pokaż mniej</span>
+                }
+                else
+                {
+                    <span><i class="bi bi-chevron-down"></i> Pokaż więcej (@(Items.Count - MaxVisibleCount))</span>
+                }
+            </button>
+        }
+    </div>
+    <hr class="text-muted opacity-25 my-3" />
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public List<string> Items { get; set; } = new();
+    [Parameter, EditorRequired] public List<string> SelectedItems { get; set; } = new();
+
+    [Parameter] public string Prefix { get; set; } = "flt";
+    [Parameter] public int MaxVisibleCount { get; set; } = 5;
+
+    private bool isExpanded = false;
+
+    private IEnumerable<string> GetVisibleItems()
+    {
+        if (isExpanded) return Items;
+        return Items.Take(MaxVisibleCount);
+    }
+
+    private void ToggleSelection(string item)
+    {
+        if (SelectedItems.Contains(item))
+        {
+            SelectedItems.Remove(item);
+        }
+        else
+        {
+            SelectedItems.Add(item);
+        }
+    }
+}

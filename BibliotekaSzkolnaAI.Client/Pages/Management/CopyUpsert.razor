@@ -1,0 +1,306 @@
+﻿@page "/panel/zasoby/egzemplarze/dodaj"
+@page "/panel/zasoby/egzemplarze/edytuj/{CopyID:int}"
+@page "/panel/zasoby/ksiazki/szczegoly/{BookId:int}/dodaj-egzemplarz"
+
+@layout ManagementLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+@inject GlobalUiService UI
+
+<PageTitle>@(CopyId == 0 ? "Dodaj" : "Edytuj") egzemplarz</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p>Ładowanie formularza...</p>
+    </div>
+}
+else if (LoadError)
+{
+    <div class="alert alert-danger m-4 text-center">
+        <h2>Błąd</h2>
+        <p>Nie udało się załadować danych egzemplarza.</p>
+        <button class="btn btn-secondary" @onclick="GoBack">Powrót</button>
+    </div>
+}
+else
+{
+    <div class="card shadow border-0 m-4">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h2 class="py-2 text-white">@(CopyId == 0 ? "Dodaj" : "Edytuj") egzemplarz</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row pb-3">
+                <div class="col-12">
+                    <button @onclick="GoBack" class="btn btn-primary btn-lg">
+                        <i class="bi bi-arrow-bar-left"></i> Powrót
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-custom card shadow mb-4 p-4 mx-auto">
+                <EditForm Model="copy" OnValidSubmit="UpsertCopyFormSubmit">
+                    <DataAnnotationsValidator />
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3 w-100">
+                                <label class="form-label fw-bold" for="copyBookISBN">Numer ISBN książki</label>
+
+                                <SfTextBox ID="copyBookISBN"
+                                           @bind-Value="copy.BookIsbn"
+                                           ValueChange="@OnIsbnChanged"
+                                           Placeholder="Wpisz ISBN książki"
+                                           FloatLabelType="FloatLabelType.Auto"></SfTextBox>
+
+                                <ValidationMessage For="@(() => copy.BookIsbn)" />
+
+                                @if (isSearchingBook)
+                                {
+                                    <span class="text-muted small">Pobieram dane...</span>
+                                }
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold" for="copyInventoryNum">Numer inwentarzowy</label>
+                                <SfNumericTextBox ShowSpinButton="false" ID="copyInventoryNum" Format="#" TValue="int" @bind-Value="copy.InventoryNum" Placeholder="Wpisz numer inwentarzowy egzemplarza"></SfNumericTextBox>
+                                <ValidationMessage For="@(() => copy.InventoryNum)" />
+                            </div>
+
+                            <div class="mb-3 w-100">
+                                <label class="form-label fw-bold" for="copySignature">Sygnatura egzemplarza</label>
+                                <SfTextBox ID="copySignature" @bind-Value="copy.Signature" Placeholder="Wpisz sygnaturę egzemplarza"></SfTextBox>
+                                <ValidationMessage For="@(() => copy.Signature)" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 d-flex flex-column border-start ps-4" style="max-height: 500px;">
+                            <div class="d-flex flex-column flex-grow-1 mb-3">
+                                <div class="mb-3 w-100">
+                                    <label class="form-label fw-bold" for="copyBookTitle">Tytuł</label>
+                                    <SfTextBox ID="copyBookTitle" @bind-Value="copy.BookTitle" Enabled="false"></SfTextBox>
+                                    <ValidationMessage For="@(() => copy.BookTitle)" />
+                                </div>
+
+                                <div class="mb-3 w-100">
+                                    <label class="form-label fw-bold" for="copyBookAuthor">Autor</label>
+                                    <SfTextBox ID="copyBookAuthor" @bind-Value="copy.AuthorName" Enabled="false"></SfTextBox>
+                                    <ValidationMessage For="@(() => copy.AuthorName)" />
+                                </div>
+
+                                <div class="mb-3 w-100">
+                                    <label class="form-label fw-bold" for="copyBookPublisher">Wydawca</label>
+                                    <SfTextBox ID="copyBookPublisher" @bind-Value="copy.PublisherName" Enabled="false"></SfTextBox>
+                                    <ValidationMessage For="@(() => copy.PublisherName)" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold" for="copyBookYear">Rok wydania</label>
+                                    <SfNumericTextBox ShowSpinButton="false" ID="copyBookYear" TValue="int" Format="#" @bind-Value="copy.YearOfPublication" Enabled="false"></SfNumericTextBox>
+                                    <ValidationMessage For="@(() => copy.YearOfPublication)" />
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-secondary" @onclick="GoBack">
+                                Anuluj
+                            </button>
+
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-save"></i> @(CopyId == 0 ? "Dodaj egzemplarz" : "Zapisz zmiany")
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] 
+    public int CopyId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery] 
+    public string? ReturnUrl { get; set; }
+
+    [Parameter]
+    public int BookId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "isbn")]
+    public string? UrlIsbn { get; set; }
+
+    private CopyUpsertDto copy = new CopyCreateDto();
+
+    private bool IsLoading = true;
+    private bool LoadError = false;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+    private bool isSearchingBook = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (CopyId > 0)
+            {
+                copy = new CopyEditDto();
+
+                var details = await Http.GetFromJsonAsync<CopyGetDetailedDto>($"api/management/copies/details/{CopyId}");
+
+                if (details != null)
+                {
+                    MapDetailsToEdit(details);
+                }
+                else
+                {
+                    LoadError = true;
+                }
+            }
+            else
+            {
+
+                copy = new CopyCreateDto();
+                await LoadNextInventoryNumber();
+                if (!string.IsNullOrEmpty(UrlIsbn))
+                {
+                    copy.BookIsbn = UrlIsbn;
+                    await FetchBookData(UrlIsbn);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            LoadError = true;
+        }
+        finally { IsLoading = false; }
+    }
+
+    private void MapDetailsToEdit(CopyGetDetailedDto d)
+    {
+        copy.Signature = d.Signature;
+        copy.InventoryNum = d.InventoryNum;
+        copy.BookId = d.BookId;
+        copy.BookIsbn = d.BookIsbn;
+        copy.BookTitle = d.BookTitle;
+        copy.AuthorName = d.AuthorName;
+        copy.PublisherName = d.PublisherName;
+        copy.YearOfPublication = d.YearOfPublication;
+    }
+
+    private async Task UpsertCopyFormSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (CopyId > 0)
+            {
+                response = await Http.PutAsJsonAsync($"api/management/copies/edit/{CopyId}", copy);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/management/copies/create", (CopyCreateDto)copy);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast(BookId == 0 ? "Dodano egzemplarz! Za chwilę nastąpi powrót do poprzedniej strony." : "Zapisano zmiany! Za chwilę nastąpi powrót do poprzedniej strony.", "success");
+                await Task.Delay(3000);
+                GoBack();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się zapisać: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex) { errorMessage = $"Błąd sieci: {ex.Message}"; }
+        finally { isSubmitting = false; }
+    }
+
+    private void GoBack()
+    {
+        if (!string.IsNullOrEmpty(ReturnUrl)) NavigationManager.NavigateTo(ReturnUrl);
+        else NavigationManager.NavigateTo("/panel/uzytkownicy/lista");
+    }
+
+    public class ProblemDetails
+    {
+        public string? Detail { get; set; }
+    }
+
+    private async Task LoadNextInventoryNumber()
+    {
+        try
+        {
+            var nextNum = await Http.GetFromJsonAsync<int>("api/management/copies/next-inventory-number");
+            copy.InventoryNum = nextNum;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Nie udało się pobrać numeru inwentarzowego: " + ex.Message);
+        }
+    }
+
+    private async Task OnIsbnChanged(ChangedEventArgs args)
+    {
+        var isbn = args.Value as string;
+        await FetchBookData(isbn);
+    }
+
+    private async Task FetchBookData(string? isbn)
+    {
+        if (string.IsNullOrWhiteSpace(isbn)) return;
+
+        isSearchingBook = true;
+        errorMessage = null;
+
+        try
+        {
+            var bookData = await Http.GetFromJsonAsync<BookLookupDto>($"api/management/books/lookup/{isbn}");
+
+            if (bookData != null)
+            {
+                copy.BookIsbn = isbn;
+                copy.BookTitle = bookData.Title;
+                copy.AuthorName = bookData.AuthorName;
+                copy.PublisherName = bookData.PublisherName;
+                copy.YearOfPublication = bookData.Year;
+                copy.BookId = bookData.Id;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            copy.BookTitle = "Brak w bazie (wpisz ręcznie)";
+        }
+        finally
+        {
+            isSearchingBook = false;
+            StateHasChanged(); 
+        }
+    }
+}

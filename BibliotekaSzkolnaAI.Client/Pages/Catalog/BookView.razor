@@ -1,0 +1,467 @@
+﻿@page "/szczegoly/{BookId:int}"
+@page "/katalog/szczegoly/{BookId:int}"
+@page "/szukaj/szczegoly/{BookId:int}"
+@page "/lektury/szczegoly/{BookId:int}"
+@page "/podreczniki/szczegoly/{BookId:int}"
+
+@layout CatalogLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+@inject GlobalUiService UI
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ikona ładowania katalogu." />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+
+else if (book is null)
+{
+    <div class="alert alert-danger m-4 text-center" role="alert">
+        <h2>Nie znaleziono książki</h2>
+        <p>Nie udało się odnaleźć książki o podanym identyfikatorze.</p>
+        <button name="Powrót"
+                class="btn btn-primary btn-lg"
+                @onclick="GoBack">
+
+            <i class="bi bi-arrow-bar-left"
+               aria-hidden="true"></i> Powrót
+        </button>
+    </div>
+}
+
+else 
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom py-2">@book.Title </h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 m-auto">
+                    <button name="Powrót"
+                            class="btn btn-primary btn-lg"
+                            @onclick="GoBack">
+
+                        <i class="bi bi-arrow-bar-left"
+                           aria-hidden="true"></i> Powrót
+                    </button>
+
+                    <div class="d-flex flex-column align-items-end">
+                        <AuthorizeView>
+                            <Authorized>
+                                <button class="btn btn-sm @(book.IsFavorite ? "btn-outline-primary" : "btn-primary")"
+                                        @onclick="() => ToggleFavorite(book)" >
+
+                                    <i class="bi @(book.IsFavorite ? "bi-bookmark-dash" : "bi-bookmark-star")"
+                                       aria-hidden="true"></i> @(book.IsFavorite ? " Usuń z półki" : " Dodaj na półkę")
+                                        
+                                </button>
+                            </Authorized>
+
+                            <NotAuthorized>
+                                <span class="theme-font-col-pri fst-italic">Zaloguj się, aby dodać na półkę</span>
+                            </NotAuthorized>
+                        </AuthorizeView>
+
+                        <p class="theme-font-col-pri small mt-1">Na półce u: <strong>@book.FavoriteCount</strong> @(book.FavoriteCount == 1 ? " osoby" : " osób")</p>
+                     </div>
+                </div>
+            </div>
+
+
+            <!--Informacje o książce-->
+            <div class="card mb-3">
+                <div class="row g-0">
+                    <!--Okładka-->
+                    <div class="col-md-4 d-flex justify-content-center align-items-center">
+                        @if (book.ImageUrl == null)
+                        {
+                            <p class="theme-font-col-pri">Brak okładki.</p>
+                        }
+                        else
+                        {
+                            <img src="@(GetFullImageUrl(book.ImageUrl))" alt="Okładka książki @book.Title" class="details-image">
+                        }
+                    </div>
+                    
+                    <!--Opis-->
+                    <div class="col-md-8">
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @if (book.BookSpecialTags != null && book.BookSpecialTags.Any())
+                                    {
+                                        foreach (var tag in book.BookSpecialTags)
+                                        {
+                                            <span class="@GetBadgeClass(tag)">@tag</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <dl class="row theme-font-col-pri">
+                                <dt class="col-sm-3 text-end">Tytuł</dt>
+                                <dd class="col-sm-9">@book.Title</dd>
+
+                                <dt class="col-sm-3 text-end">Autor</dt>
+                                <dd class="col-sm-9">@book.BookAuthor</dd>
+
+                                <dt class="col-sm-3 text-end">Opis książki</dt>
+                                <dd class="col-sm-9">@book.Description</dd>
+
+                                @if (book.BookSeries != "--brak--")
+                                {
+                                    <dt class="col-sm-3 text-end">Seria</dt>
+                                    <dd class="col-sm-9">@book.BookSeries</dd>
+                                }
+
+                                <dt class="col-sm-3 text-end">Wydawca</dt>
+                                <dd class="col-sm-9">@book.BookPublisher</dd>
+
+                                <dt class="col-sm-3 text-end">Rok wydania</dt>
+                                <dd class="col-sm-9">@book.Year</dd>
+
+                                <dt class="col-sm-3 text-end">Numer ISBN</dt>
+                                <dd class="col-sm-9">@book.Isbn</dd>
+
+                                <dt class="col-sm-3 text-end">Liczba stron</dt>
+                                <dd class="col-sm-9">@book.PageCount</dd>
+
+                                <dt class="col-sm-3 text-end">Typ</dt>
+                                <dd class="col-sm-9">@book.BookType</dd>
+
+                                <dt class="col-sm-3 text-end">Gatunki</dt>
+                                <dd class="col-sm-9">@string.Join(", ", book.BookGenres)</dd>
+
+                                @if (book.BookCategory != "pozostałe")
+                                {
+                                    <dt class="col-sm-3 text-end">Kategoria</dt>
+                                    <dd class="col-sm-9">@book.BookCategory</dd>
+                                }
+
+                                @if (book.Subject is not null)
+                                {
+                                    <dt class="col-sm-3 text-end">Przedmiot</dt>
+                                    <dd class="col-sm-9">@book.Subject</dd>
+                                }
+
+                                @if (book.Class is not null)
+                                {
+                                    <dt class="col-sm-3 text-end">Klasa</dt>
+                                    <dd class="col-sm-9">@book.Class</dd>
+                                }
+                            </dl>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--Egzemplarze-->
+        <div id="availablecopies">
+            <div class="card-header bg-theme bg-gradient ml-0 py-3">
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <h2 class="h2-custom py-2" id="egzemplarze-tytul">Lista egzemplarzy (@book.CopyCount)</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+
+                @if (book.BookCopies.Any())
+                {
+                    int index = 1;
+
+                    <div class="table-responsive-xxl">
+                        <table class="tbl-cat" aria-labelledby="egzemplarze-tytul">
+
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Książka</th>
+                                    <th scope="col">Sygnatura</th>
+                                    <th scope="col">Numer inwentarzowy</th>
+                                    <th scope="col">Dostępna</th>
+                                    <th scope="col">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var copy in book.BookCopies)
+                                {
+                                    <tr>
+                                        <th scope="row">@index</th>
+                                        <td>@book.Title</td>
+                                        <td>@copy.Signature</td>
+                                        <td>@copy.InventoryNum</td>
+                                        <td>@(copy.Available ? "Tak" : "Nie")</td>
+                                        <td class="text-end align-middle">
+                                            <AuthorizeView>
+                                                <Authorized>
+
+                                                    @if (copy.Available)
+                                                    {
+                                                        @if (copyIdsInCart.Contains(copy.Id))
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-success" disabled>
+                                                                <i class="bi bi-check-lg"></i> W koszyku
+                                                            </button>
+                                                        }
+                                                        else if (copyIdsBeingAdded.Contains(copy.Id))
+                                                        {
+                                                            <button class="btn btn-sm btn-secondary" disabled>
+                                                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                                Dodawanie...
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button class="btn btn-sm btn-primary" @onclick="() => AddToCart(copy.Id)">
+                                                                <i class="bi bi-cart-plus"></i> Dodaj do koszyka
+                                                            </button>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Niedostępny</span>
+                                                    }
+                                                </Authorized>
+
+                                                <NotAuthorized>
+                                                    <span class="theme-font-col-pri fst-italic">Zaloguj się, aby dodać</span>
+                                                </NotAuthorized>
+
+                                            </AuthorizeView>
+
+                                            @if (!string.IsNullOrEmpty(cartErrorMessage) && errorBookCopyId == copy.Id)
+                                            {
+                                                <div class="text-danger small mt-1">@cartErrorMessage</div>
+                                            }
+                                        </td>
+                                    </tr>
+                                    index++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int BookId { get; set; }
+    private BookGetDto? book { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; }
+
+    private bool IsLoading = true;
+    private bool _pageTitleSet = false;
+    private string? favoriteErrorMessage;
+
+    private HashSet<int> copyIdsBeingAdded = new();
+    private HashSet<int> copyIdsInCart = new();
+    private string? cartErrorMessage;
+    private int? errorBookCopyId; 
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+
+        try
+        {
+            book = await Http.GetFromJsonAsync<BookGetDto>($"api/catalog/details/{BookId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania książki: {ex.Message}");
+            book = null;
+        }
+
+        if (book == null)
+        {
+            IsLoading = false;
+            return;
+        }
+
+        var authState = await AuthStateTask;
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            var favoritesTask = LoadFavoriteIdsAsync();
+            var cartTask = LoadCartStateAsync();
+
+            await Task.WhenAll(favoritesTask, cartTask);
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task LoadFavoriteIdsAsync()
+    {
+        if (book == null) return;
+        try
+        {
+            var favoriteIds = await Http.GetFromJsonAsync<List<int>>("api/favorites/ids");
+            if (favoriteIds != null)
+            {
+                book.IsFavorite = favoriteIds.Contains(book.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd pobierania statusu ulubionych: {ex.Message}");
+        }
+    }
+
+    private async Task LoadCartStateAsync()
+    {
+        try
+        {
+            var cartItems = await Http.GetFromJsonAsync<List<ReservationGetDto>>("api/bookreservation/cart");
+
+            if (cartItems != null)
+            {
+                copyIdsInCart = cartItems.Select(item => item.BookCopyId).ToHashSet();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd pobierania stanu koszyka: {ex.Message}");
+        }
+    }
+
+    private async Task AddToCart(int bookCopyId)
+    {
+        cartErrorMessage = null;
+        errorBookCopyId = null;
+
+        copyIdsBeingAdded.Add(bookCopyId);
+
+        try
+        {
+            var response = await Http.PostAsync($"api/bookreservation/add/{bookCopyId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                copyIdsInCart.Add(bookCopyId);
+                UI.ShowToast("Dodano do koszyka.", "success");
+
+            }
+            else
+            {
+                UI.ShowToast($"Nie udało się dodać do koszyka.", "error");
+                errorBookCopyId = bookCopyId;
+            }
+        }
+        catch (Exception ex)
+        {
+            UI.ShowToast("Wystąpił błąd połączenia z serwerem.", "error");
+            errorBookCopyId = bookCopyId;
+        }
+        finally
+        {
+            copyIdsBeingAdded.Remove(bookCopyId); 
+        }
+    }
+
+    private async Task ToggleFavorite(BookGetDto bookToToggle)
+    {
+        favoriteErrorMessage = null;
+
+        var authState = await AuthStateTask;
+        if (authState.User.Identity == null || !authState.User.Identity.IsAuthenticated)
+        {
+            favoriteErrorMessage = "Musisz być zalogowany, aby zarządzać ulubionymi.";
+            NavigationManager.NavigateTo("/konto/zaloguj");
+            return;
+        }
+
+        try
+        {
+            if (bookToToggle.IsFavorite)
+            {
+                var response = await Http.DeleteAsync($"api/favorites/{bookToToggle.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    bookToToggle.IsFavorite = false;
+                }
+                else
+                {
+                    favoriteErrorMessage = "Nie udało się usunąć z ulubionych.";
+                }
+            }
+            else
+            {
+                var response = await Http.PostAsync($"api/favorites/{bookToToggle.Id}", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    bookToToggle.IsFavorite = true;
+                }
+                else
+                {
+                    favoriteErrorMessage = "Nie udało się dodać do ulubionych.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            favoriteErrorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_pageTitleSet && book != null)
+        {
+            await JS.InvokeVoidAsync("setTitle", $"{book.Title} - Biblioteka");
+            _pageTitleSet = true;
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+
+    private string GetBadgeClass(string tag)
+    {
+        return tag switch
+        {
+            "Polecane" => "badge bg-success",
+            "Nowości" => "badge bg-warning text-dark",
+            "Popularne" => "badge bg-info text-dark",
+            _ => "badge bg-warning"
+        };
+    }
+
+    private void GoBack()
+    {
+        if (!string.IsNullOrEmpty(ReturnUrl))
+            NavigationManager.NavigateTo(ReturnUrl);
+        else
+            NavigationManager.NavigateTo("/");
+    }
+
+    private string GetFullImageUrl(string relativePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7069";
+        return $"{apiBaseUrl}{relativePath}";
+    }
+}

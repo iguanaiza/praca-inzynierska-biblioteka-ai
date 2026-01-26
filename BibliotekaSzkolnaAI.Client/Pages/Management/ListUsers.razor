@@ -1,0 +1,172 @@
+﻿@page "/panel/uzytkownicy/lista"
+
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>Zarządzanie użytkownikami</PageTitle>
+
+<PageTitle>Lista użytkowników</PageTitle>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-theme bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom">Lista użytkowników</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <div class="row pb-3">
+            <div class="col-12 text-end">
+                <a href="/panel/uzytkownicy/lista/dodaj?returnUrl=/panel/uzytkownicy/lista" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Dodaj użytkownika
+                </a>
+            </div>
+        </div>
+
+        <SfGrid @ref="Grid" TValue="UserForListDto" AllowPaging="true" AllowSorting="true" AllowFiltering="true" Height="490">
+
+            <SfDataManager Adaptor="Adaptors.CustomAdaptor">
+                <UserApiAdaptor />
+            </SfDataManager>
+
+            <GridPageSettings PageSize="10" PageSizes="@(new int[] { 10, 25, 50, 100 })"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+            <GridColumns>
+                <GridColumn HeaderText="#" Width="50" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var item = (context as UserForListDto);
+                            var index = 0;
+                            if (Grid?.CurrentViewData != null) index = Grid.CurrentViewData.IndexOf(item);
+
+                            if (index >= 0)
+                            {
+                                var page = Grid.PageSettings.CurrentPage;
+                                var size = Grid.PageSettings.PageSize;
+                                @(((page - 1) * size) + index + 1)
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn HeaderText="Info" Width="60" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var user = (context as UserForListDto);
+                        }
+                        <a href="/panel/uzytkownicy/lista/szczegoly/@user.Id?returnUrl=/panel/uzytkownicy/lista"
+                           class="btn btn-outline-primary btn-sm"
+                           title="Szczegóły i Edycja">
+                            <i class="bi bi-info-square"></i>
+                        </a>
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.UserType) HeaderText="Typ" Width="100"></GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.LibraryId) HeaderText="Nr Karty" Width="100"></GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.FullName) HeaderText="Nazwisko i Imię" Width="200"></GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.Class) HeaderText="Klasa" Width="80" TextAlign="TextAlign.Center"></GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.Email) HeaderText="Email" Width="200"></GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.ActiveLoanCount) HeaderText="Wypożycz." Width="100" TextAlign="TextAlign.Center">
+                    <Template>
+                        @{
+                            var user = (context as UserForListDto);
+                            if (user.ActiveLoanCount > 0)
+                            {
+                                <span class="badge bg-warning text-dark">@user.ActiveLoanCount</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">0</span>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(UserForListDto.FineAmount) HeaderText="Kary" Width="100" TextAlign="TextAlign.Right">
+                    <Template>
+                        @{
+                            var user = (context as UserForListDto);
+                        }
+
+                        @if (user.FineAmount > 0)
+                        {
+                            <span class="text-danger fw-bold">
+                                @user.FineAmount.ToString("0.00 'zł'")
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+                                @user.FineAmount.ToString("0.00 'zł'")
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn HeaderText="Akcje" Width="140" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var user = (context as UserForListDto);
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/panel/uzytkownicy/lista/edytuj/@user.Id?returnUrl=/panel/uzytkownicy/lista"
+                                   class="btn btn-outline-primary btn-sm"
+                                   title="Edytuj">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+
+                                <button class="btn btn-outline-danger btn-sm"
+                                        title="Przenieś do kosza"
+                                        @onclick="() => MoveToBin(user.Id, user.FullName)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+@code {
+    private SfGrid<UserForListDto> Grid;
+
+    private async Task MoveToBin(string userId, string fullName)
+    {
+        bool confirmed = await UI.ConfirmAsync("Przenoszenie do kosza", $"Czy na pewno chcesz przenieść użytkownika '{fullName}' do kosza?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PutAsync($"api/management/users/bin/{userId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Użytkownik został przeniesiony do kosza.", "success");
+                if (Grid != null) await Grid.Refresh();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się usunąć: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sieci: {ex.Message}");
+        }
+    }
+}

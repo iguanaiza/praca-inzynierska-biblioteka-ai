@@ -1,0 +1,101 @@
+﻿<div class="navmenu">
+
+    <div class="d-md-none p-2 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
+        <span class="ps-3 fw-bold text-white tracking-wide">MENU</span>
+        <button title="Nawigacja" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="bi bi-list fs-4"></span>
+        </button>
+    </div>
+
+    <div class="@NavMenuCssClass pt-2" @onclick="ToggleNavMenu">
+
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link" href="/panel/dashboard" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill me-3" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link cursor-pointer d-flex justify-content-between align-items-center nav-link-custom"
+                 @onclick="() => expandLoans = !expandLoans" @onclick:stopPropagation>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-journal-bookmark-fill me-3"></i>
+                    <span>Wypożyczenia</span>
+                </div>
+                <i class="bi @(expandLoans ? "bi-chevron-up" : "bi-chevron-down") small opacity-75"></i>
+            </div>
+
+            @if (expandLoans)
+            {
+                <div class="submenu animate-slide" @onclick:stopPropagation>
+                    <NavLink class="nav-link py-1" href="/panel/wypozyczenia/oczekujace">
+                        <i class="bi bi-hourglass-split me-2"></i> Oczekujące
+                    </NavLink>
+
+                    <NavLink class="nav-link py-1" href="/panel/wypozyczenia/biezace">
+                        <i class="bi bi-journal-arrow-up me-2"></i> Bieżące
+                    </NavLink>
+
+                    <NavLink class="nav-link py-1" href="/panel/wypozyczenia/archiwum">
+                        <i class="bi bi-archive-fill me-2"></i> Archiwum
+                    </NavLink>
+                </div>
+            }
+        </div>
+
+        <div class="nav-item px-3 mt-2">
+            <div class="nav-link cursor-pointer d-flex justify-content-between align-items-center nav-link-custom"
+                 @onclick="() => expandResources = !expandResources" @onclick:stopPropagation>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-collection-fill me-3"></i>
+                    <span>Zasoby</span>
+                </div>
+                <i class="bi @(expandResources ? "bi-chevron-up" : "bi-chevron-down") small opacity-75"></i>
+            </div>
+
+            @if (expandResources)
+            {
+                <div class="submenu animate-slide" @onclick:stopPropagation>
+                    <NavLink class="nav-link py-1" href="/panel/zasoby/ksiazki">
+                        <i class="bi bi-book me-2"></i> Książki
+                    </NavLink>
+                    <NavLink class="nav-link py-1" href="/panel/zasoby/egzemplarze">
+                        <i class="bi bi-upc-scan me-2"></i> Egzemplarze
+                    </NavLink>
+                    <NavLink class="nav-link py-1" href="/panel/zasoby/lektury">
+                        <i class="bi bi-bookmark-star me-2"></i> Lektury
+                    </NavLink>
+                    <NavLink class="nav-link py-1" href="/panel/zasoby/podreczniki">
+                        <i class="bi bi-backpack me-2"></i> Podręczniki
+                    </NavLink>
+                </div>
+            }
+        </div>
+
+        <div class="nav-item px-3 mb-2 mt-2">
+            <NavLink class="nav-link py-1" href="/panel/uzytkownicy/lista">
+                <i class="bi bi-person-lines-fill me-3"></i> Użytkownicy
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link" href="/panel/kosz">
+                <span class="bi bi-trash-fill me-3" aria-hidden="true"></span> Kosz
+            </NavLink>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool expandLoans = false;
+    private bool expandResources = false;
+
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

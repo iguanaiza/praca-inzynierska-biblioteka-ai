@@ -1,0 +1,108 @@
+﻿@page "/"
+@layout CatalogLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+
+<PageTitle>Strona główna katalogu biblioteki SP 123 w Testach</PageTitle>
+
+<h1 class="visually-hidden">Strona główna katalogu</h1>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie katalogu" />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+
+else if (BooksByTag is not null && BooksByTag.Any())
+{
+    @foreach (var tag in BooksByTag.Keys)
+    {
+        <div class="card shadow mb-4 p-4">
+            <div class="mb-4 px-2">
+                <h2 class="fw-bold theme-font-col-pri">@tag</h2>
+            </div>
+
+            <div id="carousel-@tag" class="carousel-wrapper px-2">
+                <button aria-label="Przewiń książki z kategorii @tag w lewo"
+                        class="carousel-btn left" 
+                        @onclick="() => Scroll(tag, -1)">
+
+                        <span aria-hidden="true">&#10094;</span>
+                </button>
+
+                <div class="carousel-container">
+                    @foreach (var book in BooksByTag[tag])
+                    {
+                        <a href="/szczegoly/@book.Id?ReturnUrl=/" class="book-card text-decoration-none text-dark">
+                            <div class="book-cover-container">
+                                <img src="@(GetFullImageUrl(book.ImageUrl))"
+                                     class="book-cover" 
+                                     alt=""/>
+                            </div>
+                            <div class="book-title theme-font-col-pri">@book.Title</div>
+                        </a>
+                    }
+                </div>
+
+                <button aria-label="Przewiń książki z kategorii @tag w prawo"
+                        class="carousel-btn right" 
+                        @onclick="() => Scroll(tag, 1)">
+
+                        <span aria-hidden="true">&#10095;</span>
+                </button>
+            </div>
+        </div>
+    }
+}
+
+else
+{
+    <p class="text-center">Nie udało się załadować książek lub katalog jest pusty.</p>
+}
+
+
+@code {
+    private Dictionary<string, IEnumerable<BookGetForHomepageDto>>? BooksByTag;
+
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            BooksByTag = await Http.GetFromJsonAsync<Dictionary<string, IEnumerable<BookGetForHomepageDto>>>("api/catalog/homepage-books");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania danych strony głównej: {ex.Message}");
+            BooksByTag = new();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+
+    private async Task Scroll(string tag, int direction)
+    {
+        await JS.InvokeVoidAsync("scrollCarousel", $"carousel-{tag}", direction);
+    }
+
+    private string GetFullImageUrl(string relativePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7069";
+        return $"{apiBaseUrl}{relativePath}";
+    }
+}

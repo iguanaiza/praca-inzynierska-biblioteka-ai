@@ -1,0 +1,324 @@
+﻿@page "/panel/uzytkownicy/lista/dodaj"
+@page "/panel/uzytkownicy/lista/szczegoly/{UserId}/edytuj"
+@page "/panel/uzytkownicy/lista/edytuj/{UserId}"
+
+@layout ManagementLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+@inject GlobalUiService UI
+
+<PageTitle>@(string.IsNullOrEmpty(UserId) ? "Dodaj" : "Edytuj") użytkownika</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p>Ładowanie formularza...</p>
+    </div>
+}
+else if (LoadError)
+{
+    <div class="alert alert-danger m-4 text-center">
+        <h2>Błąd</h2>
+        <p>Nie udało się załadować danych użytkownika.</p>
+        <button class="btn btn-primary btn-lg" @onclick="GoBack">Powrót</button>
+    </div>
+}
+else
+{
+    <div class="card shadow border-0 m-4">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h2 class="py-2 text-white">@(string.IsNullOrEmpty(UserId) ? "Dodaj" : "Edytuj") użytkownika</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row pb-3">
+                <div class="col-12">
+                    <button @onclick="GoBack" class="btn btn-primary btn-lg">
+                        <i class="bi bi-arrow-bar-left"></i> Powrót
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-custom card shadow mb-4 p-4 mx-auto">
+                <EditForm Model="user" OnValidSubmit="UpsertUserFormSubmit">
+                    <DataAnnotationsValidator />
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-8">
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Imię</label>
+                                    <SfTextBox @bind-Value="user.FirstName" Placeholder="Imię"></SfTextBox>
+                                    <ValidationMessage For="@(() => user.FirstName)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Nazwisko</label>
+                                    <SfTextBox @bind-Value="user.LastName" Placeholder="Nazwisko"></SfTextBox>
+                                    <ValidationMessage For="@(() => user.LastName)" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Email (Login)</label>
+                                    <SfTextBox @bind-Value="user.Email" Placeholder="adres@email.com" Type="InputType.Email"></SfTextBox>
+                                    <ValidationMessage For="@(() => user.Email)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Telefon</label>
+                                    <SfTextBox @bind-Value="user.PhoneNumber" Placeholder="Nr telefonu"></SfTextBox>
+                                    <ValidationMessage For="@(() => user.PhoneNumber)" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">PESEL</label>
+                                <SfTextBox @bind-Value="user.Pesel" Placeholder="PESEL (11 cyfr)" MaxLength="11"></SfTextBox>
+                                <ValidationMessage For="@(() => user.Pesel)" />
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Klasa</label>
+                                    <SfComboBox TValue="string" TItem="string" DataSource="@Classes"
+                                                @bind-Value="user.Class" Placeholder="Wybierz klasę">
+                                    </SfComboBox>
+                                </div>
+                            </div>
+
+                            @if (string.IsNullOrEmpty(UserId))
+                            {
+                                <div class="p-3 mt-3 bg-light border rounded">
+                                    <h5 class="mb-3 text-muted">Dane konta</h5>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">Rola w systemie</label>
+                                            <SfComboBox TValue="string" TItem="string" DataSource="@Roles"
+                                                        @bind-Value="((UserCreateDto)user).Role" Placeholder="Wybierz rolę">
+                                            </SfComboBox>
+                                            <ValidationMessage For="@(() => ((UserCreateDto)user).Role)" />
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Typ użytkownika</label>
+                                        <SfComboBox TValue="string" TItem="string" DataSource="@UserTypes"
+                                                    @bind-Value="((UserCreateDto)user).UserType" Placeholder="Np. Uczeń, Nauczyciel">
+                                        </SfComboBox>
+                                        <ValidationMessage For="@(() => ((UserCreateDto)user).UserType)" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="col-md-4 d-flex flex-column border-start ps-4">
+
+                            <div class="d-flex flex-column flex-grow-1 mb-3">
+                                <label class="form-label fw-bold mb-2">Zdjęcie profilowe</label>
+
+                                <div class="card flex-grow-1 shadow-sm">
+                                    <div class="card-body bg-light d-flex flex-column justify-content-center align-items-center h-100">
+
+                                        @if (!string.IsNullOrEmpty(user.ProfilePictureUrl)) 
+                                        {
+                                            <div class="flex-grow-1 d-flex align-items-center justify-content-center w-100 overflow-hidden">
+                                                <img src="@GetImageUrl(user.ProfilePictureUrl)" 
+                                                     alt="Avatar" 
+                                                     class="img-fluid rounded-circle shadow-sm" 
+                                                     style="width: 150px; height: 150px; object-fit: cover;" />
+                                            </div>
+                                            <div class="w-100 mt-3">
+                                                 <button type="button" class="btn btn-outline-danger btn-sm w-100">Usuń</button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted mb-4 text-center">
+                                                <i class="bi bi-person-circle display-1"></i>
+                                                <p class="small mt-2">Brak zdjęcia</p>
+                                            </div>
+
+                                            <div class="w-100">
+                                                <SfUploader AutoUpload="false" AllowMultiple="false" AllowedExtensions=".jpg, .png">
+                                                    <UploaderEvents ValueChange="OnImageUpload"></UploaderEvents>
+                                                </SfUploader>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-secondary" @onclick="GoBack">
+                                Anuluj
+                            </button>
+
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-save"></i> @(string.IsNullOrEmpty(UserId) ? "Dodaj użytkownika" : "Zapisz zmiany")
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? UserId { get; set; }
+    [Parameter][SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private UserEditDto user = new UserCreateDto();
+
+    private bool IsLoading = true;
+    private bool LoadError = false;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    private List<string> Classes = new() { "1a", "1b", "2a", "2b", "3a", "3b" };
+    private List<string> Roles = new() { "Użytkownik", "Bibliotekarz", "Admin" };
+    private List<string> UserTypes = new() { "Uczeń", "Pracownik" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(UserId))
+            {
+                user = new UserEditDto();
+
+                var details = await Http.GetFromJsonAsync<UserDetailedDto>($"api/management/users/details/{UserId}");
+
+                if (details != null)
+                {
+                    MapDetailsToEdit(details);
+                }
+                else
+                {
+                    LoadError = true;
+                }
+            }
+            else
+            {
+  
+                user = new UserCreateDto(); 
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            LoadError = true;
+        }
+        finally { IsLoading = false; }
+    }
+
+    private void MapDetailsToEdit(UserDetailedDto d)
+    {
+        user.FirstName = d.FirstName;
+        user.LastName = d.LastName;
+        user.Email = d.Email;
+        user.Pesel = d.Pesel;
+        user.PhoneNumber = d.PhoneNumber;
+        user.Class = d.Class;
+    }
+
+    private async Task UpsertUserFormSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (!string.IsNullOrEmpty(UserId))
+            {
+                response = await Http.PutAsJsonAsync($"api/management/users/edit/{UserId}", user);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/management/users/create", (UserCreateDto)user);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast(string.IsNullOrEmpty(UserId) ? "Dodano użytkownika! Za chwilę nastąpi powrót do poprzedniej strony." : "Zapisano zmiany! Za chwilę nastąpi powrót do poprzedniej strony.", "success");
+                await Task.Delay(3000);
+                GoBack();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się zapisać: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex) { errorMessage = $"Błąd sieci: {ex.Message}"; }
+        finally { isSubmitting = false; }
+    }
+
+    private async Task OnImageUpload(UploadChangeEventArgs args)
+    {
+        try
+        {
+            var apiBaseUrl = Configuration["ApiBaseUrl"];
+            if (string.IsNullOrEmpty(apiBaseUrl)) return;
+            var uploadUrl = $"{apiBaseUrl.TrimEnd('/')}/api/fileupload/upload";
+
+            foreach (var file in args.Files)
+            {
+                using var content = new MultipartFormDataContent();
+                var fileContent = new StreamContent(file.File.OpenReadStream(long.MaxValue));
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.FileInfo.Type ?? "image/jpeg");
+                content.Add(fileContent, "file", file.FileInfo.Name);
+
+                var response = await Http.PostAsync(uploadUrl, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+                    if (result != null)
+                    {
+                        user.ProfilePictureUrl = result.Url;
+                        StateHasChanged();
+                    }
+                }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+    }
+
+    private void GoBack()
+    {
+        if (!string.IsNullOrEmpty(ReturnUrl)) NavigationManager.NavigateTo(ReturnUrl);
+        else NavigationManager.NavigateTo("/panel/uzytkownicy/lista");
+    }
+
+    private string GetImageUrl(string? relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath)) return "/images/no-avatar.png";
+        var apiBaseUrl = Configuration["ApiBaseUrl"];
+        return $"{apiBaseUrl?.TrimEnd('/')}/{relativePath.TrimStart('/')}";
+    }
+
+    public class ProblemDetails
+    {
+        public string? Detail { get; set; }
+    }
+}

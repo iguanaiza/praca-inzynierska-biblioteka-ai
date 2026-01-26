@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
+    <PackageReference Include="Syncfusion.Blazor.Charts" Version="31.2.12" />
+    <PackageReference Include="Syncfusion.Blazor.Core" Version="31.2.12" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="31.2.12" />
+    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="31.2.12" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="31.2.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BibliotekaSzkolnaAI.Shared\BibliotekaSzkolnaAI.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

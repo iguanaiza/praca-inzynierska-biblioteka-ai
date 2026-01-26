@@ -1,0 +1,149 @@
+﻿@page "/panel/zasoby/egzemplarze"
+
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>Zarządzanie egzemplarzami</PageTitle>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-theme bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom">Lista egzemplarzy</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+
+        <div class="row pb-3">
+            <div class="col-12 text-end">
+                <a href="/panel/zasoby/egzemplarze/dodaj?returnUrl=/panel/zasoby/egzemplarze" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Dodaj egzemplarz
+                </a>
+            </div>
+        </div>
+
+        <SfGrid @ref="Grid" 
+            TValue="CopyGetDetailedDto" 
+            AllowPaging="true" 
+            AllowSorting="true" 
+            AllowFiltering="true" 
+            Height="490">
+
+            <SfDataManager Adaptor="Adaptors.CustomAdaptor">
+                <CopyApiAdaptor />
+            </SfDataManager>
+
+            <GridPageSettings PageSize="10" PageSizes="@(new int[] { 10, 20, 50, 100 })"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+            <GridColumns>
+                <GridColumn HeaderText="Lp." Width="60" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var item = (context as CopyGetDetailedDto);
+                            var indexOnPage = Grid.CurrentViewData.IndexOf(item);
+                            var page = Grid.PageSettings.CurrentPage;
+                            var size = Grid.PageSettings.PageSize;
+                            var globalIndex = ((page - 1) * size) + indexOnPage + 1;
+                            @globalIndex
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn HeaderText="Szczegóły" Width="70" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var copy = (context as CopyGetDetailedDto);
+                        }
+                        <a href="/panel/zasoby/egzemplarze/szczegoly/@copy.BookId?returnUrl=/panel/zasoby/egzemplarze"
+                           class="btn btn-outline-primary btn-sm"
+                           title="Szczegóły: @copy.BookTitle">
+                            <i class="bi bi-info-square"></i>
+                        </a>
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(CopyGetDetailedDto.Signature) HeaderText="Sygnatura" Width="150"></GridColumn>
+
+                <GridColumn Field=@nameof(CopyGetDetailedDto.InventoryNum) HeaderText="Nr Inw." Width="120"></GridColumn>
+
+                <GridColumn Field=@nameof(CopyGetDetailedDto.BookTitle) HeaderText="Tytuł Książki" Width="250"></GridColumn>
+
+                <GridColumn Field=@nameof(CopyGetDetailedDto.AuthorName) HeaderText="Autor" Width="200"></GridColumn>
+
+                <GridColumn Field=@nameof(CopyGetDetailedDto.Available) HeaderText="Dostępny" Width="120" TextAlign="TextAlign.Center" Type="ColumnType.Boolean" DisplayAsCheckBox="true">
+                    <Template>
+                        @{
+                            var copy = (context as CopyGetDetailedDto);
+                            if (copy.Available)
+                            {
+                                <span class="badge bg-success">TAK</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">NIE</span>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn HeaderText="Akcje" Width="160" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var copy = (context as CopyGetDetailedDto);
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/panel/zasoby/egzemplarze/edytuj/@copy.Id?returnUrl=/panel/zasoby/egzemplarze"
+                                   class="btn btn-outline-primary btn-sm"
+                                   title="Edytuj">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        title="Przenieś do kosza"
+                                        @onclick="() => MoveToBin(copy.Id, copy.Signature)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+@code {
+    private SfGrid<CopyGetDetailedDto> Grid;
+
+    private async Task MoveToBin(int copyId, string signature)
+    {
+        bool confirmed = await UI.ConfirmAsync("Przenoszenie do kosza", $"Czy przenieść egzemplarz '{signature}' do kosza?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PutAsync($"api/management/copies/bin/{copyId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Egzemplarz przeniesiony do kosza.", "success");
+                if (Grid != null) await Grid.Refresh();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się usunąć: {errorMsg}", "error");
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

@@ -1,0 +1,212 @@
+﻿@page "/panel/wypozyczenia/{FilterMode}"
+
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>@PageHeader</PageTitle>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-theme bg-gradient ml-0 py-3">
+        <div class="col-12 text-center">
+            <h1 class="h2-custom">@PageHeader</h1>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+
+        <SfGrid @ref="Grid" DataSource="@Loans" AllowPaging="true" AllowSorting="true" AllowFiltering="true" Height="600">
+            <GridPageSettings PageSize="15" PageSizes="@(new int[] { 15, 50, 100 })"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+            <GridColumns>
+                <GridColumn HeaderText="Lp." Width="50" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var item = (context as LoanManagementDto);
+                            var index = Loans.IndexOf(item) + 1;
+                            @index
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(LoanManagementDto.UserLibraryId) HeaderText="Nr Karty" Width="100"></GridColumn>
+                <GridColumn Field=@nameof(LoanManagementDto.UserFullName) HeaderText="Użytkownik" Width="180"></GridColumn>
+                <GridColumn Field=@nameof(LoanManagementDto.Title) HeaderText="Tytuł" Width="200"></GridColumn>
+                <GridColumn Field=@nameof(LoanManagementDto.BookSignature) HeaderText="Sygnatura" Width="120"></GridColumn>
+                <GridColumn Field=@nameof(LoanManagementDto.BorrowDate) HeaderText="Wypożyczono" Format="d" Type="ColumnType.Date" Width="110" TextAlign="TextAlign.Center"></GridColumn>
+                <GridColumn Field=@nameof(LoanManagementDto.DueDate) HeaderText="Termin" Format="d" Type="ColumnType.Date" Width="110" TextAlign="TextAlign.Center"></GridColumn>
+
+                <GridColumn Field=@nameof(LoanManagementDto.Status) HeaderText="Status" Width="120" TextAlign="TextAlign.Center">
+                        <Template>
+                            @{
+                                var loan = (context as LoanManagementDto);
+                                <span class="@GetStatusBadge(loan.Status)">
+                                    @GetStatusName(loan.Status)
+                                </span>
+                            }
+                        </Template>
+                    </GridColumn>
+                
+                @if (FilterMode != "archiwum")
+                {
+                    <GridColumn HeaderText="Akcje" Width="160" TextAlign="TextAlign.Center">
+                        <Template>
+                            @{
+                                var loan = (context as LoanManagementDto);
+
+                                if (loan.Status == LoanStatus.PendingApproval)
+                                {
+                                    <button class="btn btn-success btn-sm" @onclick="() => ApproveLoan(loan.Id)">
+                                        <i class="bi bi-check-circle"></i> Wydaj
+                                    </button>
+                                }
+
+                                if (loan.Status == LoanStatus.Active || loan.Status == LoanStatus.Overdue || loan.Status == LoanStatus.PendingReturn)
+                                {
+                                    <button class="btn btn-primary btn-sm" @onclick="() => FinalizeReturn(loan.Id)">
+                                        <i class="bi bi-box-arrow-in-down"></i> Zwrot
+                                    </button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                }
+            </GridColumns>
+        </SfGrid>
+
+        @if (Loans.Count == 0 && !IsLoading)
+        {
+            <div class="alert alert-info mt-3 text-center">Brak wypożyczeń w tej kategorii.</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? FilterMode { get; set; }
+
+    private List<LoanManagementDto> Loans = new();
+    private SfGrid<LoanManagementDto> Grid;
+    private bool IsLoading = true;
+
+    private string PageHeader => FilterMode?.ToLower() switch
+    {
+        "oczekujace" => "Wydania i zwroty",
+        "biezace" => "Bieżące wypożyczenia",
+        _ => "Archiwum"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadLoans();
+    }
+
+    private async Task LoadLoans()
+    {
+        IsLoading = true;
+        string baseUrl = "api/management/loans";
+        string query = "";
+
+        switch (FilterMode?.ToLower())
+        {
+            case "oczekujace":
+                query = "?statuses=PendingApproval&statuses=PendingReturn";
+                break;
+            case "biezace":
+                query = "?statuses=Active&statuses=Overdue";
+                break;
+            default:
+                query = "?statuses=Returned";
+                break;
+        }
+
+        try
+        {
+            Loans = await Http.GetFromJsonAsync<List<LoanManagementDto>>(baseUrl + query) ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ApproveLoan(int loanId)
+    {
+        bool confirmed = await UI.ConfirmAsync("Wydanie książki", $"Zatwierdzić wydanie?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PostAsync($"api/management/loans/approve/{loanId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Książka wydana.", "success");
+                await LoadLoans();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się wydać: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sieci: {ex.Message}");
+            UI.ShowToast("Wystąpił błąd połączenia z serwerem.", "error");
+        }
+    }
+
+    private async Task FinalizeReturn(int loanId)
+    {
+        bool confirmed = await UI.ConfirmAsync("Zwrot książki", $"Potwierdzić zwrot?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PostAsync($"api/management/loans/finalize-return/{loanId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Książka zwrócona.", "success");
+                await LoadLoans();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się zwrócić: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sieci: {ex.Message}");
+            UI.ShowToast("Wystąpił błąd połączenia z serwerem.", "error");
+        }
+    }
+
+    private string GetStatusBadge(LoanStatus status) => status switch
+    {
+        LoanStatus.PendingApproval => "badge bg-warning text-dark",
+        LoanStatus.Active => "badge bg-success",
+        LoanStatus.Overdue => "badge bg-danger",
+        LoanStatus.PendingReturn => "badge bg-info text-dark",
+        LoanStatus.Returned => "badge bg-secondary",
+        _ => "badge bg-secondary"
+    };
+
+    private string GetStatusName(LoanStatus status) => status switch
+    {
+        LoanStatus.PendingApproval => "Do wydania",
+        LoanStatus.Active => "Wypożyczona",
+        LoanStatus.Overdue => "Po terminie",
+        LoanStatus.PendingReturn => "Do zwrotu",
+        LoanStatus.Returned => "Archiwum",
+        _ => status.ToString()
+    };
+}

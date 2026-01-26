@@ -1,0 +1,112 @@
+﻿@using Syncfusion.Blazor.Notifications
+@using Syncfusion.Blazor.Popups
+@implements IDisposable
+@inject GlobalUiService UiService
+
+<SfToast @ref="ToastObj" Timeout="4000" Target="body">
+    <ToastPosition X="Right" Y="Bottom"></ToastPosition>
+</SfToast>
+
+<SfDialog Width="500px" IsModal="true" @bind-Visible="IsDialogVisible" ShowCloseIcon="true" CssClass="custom-dialog">
+    <DialogTemplates>
+        <Header>
+            @DialogTitle
+        </Header>
+        <Content>
+            <p class="fs-5">@DialogMessage</p>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Anuluj" OnClick="ConfirmNo" />
+
+        <DialogButton Content="Potwierdź" IsPrimary="true" OnClick="ConfirmYes" />
+    </DialogButtons>
+    <DialogEvents Closed="DialogClosed"></DialogEvents>
+</SfDialog>
+
+@code {
+    private SfToast ToastObj;
+    
+    private bool IsDialogVisible;
+    private string DialogTitle = "";
+    private string DialogMessage = "";
+    
+    private TaskCompletionSource<bool>? _tcs;
+
+    protected override void OnInitialized()
+    {
+        UiService.OnShowToast += ShowToastHandler;
+        UiService.OnConfirmRequested += ShowConfirmHandler;
+    }
+
+    private async void ShowToastHandler(string message, string type)
+    {
+        await InvokeAsync(async () =>
+        {
+            var cssClass = type switch
+            {
+                "success" => "e-toast-success",
+                "error" => "e-toast-danger",
+                "warning" => "e-toast-warning",
+                _ => "e-toast-info"
+            };
+
+            var title = type switch
+            {
+                "success" => "Sukces",
+                "error" => "Błąd",
+                "warning" => "Uwaga",
+                _ => "Info"
+            };
+
+            await ToastObj.ShowAsync(new ToastModel
+            {
+                Title = title,
+                Content = message,
+                CssClass = cssClass,
+                Icon = "e-circle-check",
+                Timeout = 4000
+            });
+
+            StateHasChanged();
+        });
+    }
+
+    private Task<bool> ShowConfirmHandler(string title, string message)
+    {
+        DialogTitle = title;
+        DialogMessage = message;
+        IsDialogVisible = true;
+        StateHasChanged();
+
+        _tcs = new TaskCompletionSource<bool>();
+        return _tcs.Task;
+    }
+
+    private void ConfirmYes()
+    {
+        IsDialogVisible = false;
+        _tcs?.TrySetResult(true);
+    }
+
+    private void ConfirmNo()
+    {
+        IsDialogVisible = false;
+        _tcs?.TrySetResult(false);
+    }
+
+    private void DialogClosed()
+    {
+        if (IsDialogVisible) 
+        {
+            IsDialogVisible = false;
+            _tcs?.TrySetResult(false);
+        }
+    }
+
+    public void Dispose()
+    {
+        UiService.OnShowToast -= ShowToastHandler;
+        UiService.OnConfirmRequested -= ShowConfirmHandler;
+    }
+}

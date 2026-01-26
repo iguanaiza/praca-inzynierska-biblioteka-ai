@@ -1,0 +1,157 @@
+﻿@page "/panel/zasoby/ksiazki"
+
+@layout ManagementLayout
+@attribute [Authorize(Roles = "Admin,Librarian")]
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>Zarządzanie książkami</PageTitle>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-theme bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom">Lista wszystkich książek</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+
+        <div class="row pb-3">
+            <div class="col-12 text-end">
+                <a href="/panel/zasoby/ksiazki/dodaj?returnUrl=/panel/zasoby/ksiazki" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Dodaj książkę
+                </a>
+            </div>
+        </div>
+
+            <SfGrid @ref="Grid"
+                TValue="BookGetForListDetailedDto"
+                AllowPaging="true"
+                AllowSorting="true"
+                AllowFiltering="true"
+                Height="490"> 
+
+            <SfDataManager Adaptor="Adaptors.CustomAdaptor">
+                <BookApiAdaptor/>
+            </SfDataManager>
+
+            <GridPageSettings PageSize="10" PageSizes="@(new int[]{10, 25, 50, 100})"></GridPageSettings>
+
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.FilterBar" Mode="FilterBarMode.Immediate"></GridFilterSettings>
+
+            <GridColumns>
+                <GridColumn HeaderText="Lp." Width="60" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var item = (context as BookGetForListDetailedDto);
+                            var indexOnPage = Grid.CurrentViewData.IndexOf(item);
+                            var page = Grid.PageSettings.CurrentPage;
+                            var size = Grid.PageSettings.PageSize;
+                            var globalIndex = ((page - 1) * size) + indexOnPage + 1;
+                            @globalIndex
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn HeaderText="Szczegóły" Width="70" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var book = (context as BookGetForListDetailedDto);
+                        }
+                        <a href="/panel/zasoby/ksiazki/szczegoly/@book.Id?returnUrl=/panel/zasoby/ksiazki"
+                           class="btn btn-outline-primary btn-sm"
+                           title="Szczegóły: @book.Title">
+                            <i class="bi bi-info-square"></i>
+                        </a>
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.Isbn) HeaderText="ISBN" Width="140"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.Title) HeaderText="Tytuł" Width="250"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.BookAuthor) HeaderText="Autor" Width="200"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.BookPublisher) HeaderText="Wydawca" Width="150"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.BookSeries) HeaderText="Seria" Width="150"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.Year) HeaderText="Rok" Width="100" TextAlign="TextAlign.Center"></GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.AvailableCopyCount) HeaderText="Dostępne" Width="110" TextAlign="TextAlign.Center" AllowFiltering="false">
+                    <Template>
+                        @{
+                            var book = (context as BookGetForListDetailedDto);
+                            if (book.AvailableCopyCount > 0)
+                            {
+                                <span class="badge bg-success">@book.AvailableCopyCount</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">0</span>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(BookGetForListDetailedDto.IsVisible) HeaderText="Widoczna" Width="100" TextAlign="TextAlign.Center" Type="ColumnType.Boolean" DisplayAsCheckBox="true">
+                </GridColumn>
+
+                <GridColumn HeaderText="Akcje" Width="160" TextAlign="TextAlign.Center" AllowFiltering="false" AllowSorting="false">
+                    <Template>
+                        @{
+                            var book = (context as BookGetForListDetailedDto);
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/panel/zasoby/ksiazki/edytuj/@book.Id?returnUrl=/panel/zasoby/ksiazki"
+                                   class="btn btn-outline-primary btn-sm"
+                                   title="Edytuj">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        title="Przenieś do kosza"
+                                        @onclick="() => MoveToBin(book.Id, book.Title)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+@code {
+    private SfGrid<BookGetForListDetailedDto> Grid;
+
+    private async Task MoveToBin(int bookId, string title)
+    {
+        bool confirmed = await UI.ConfirmAsync("Przenoszenie do kosza", $"Czy na pewno chcesz przenieść książkę '{title}' do kosza?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PutAsync($"api/management/books/bin/{bookId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Książka została przeniesiona do kosza.", "success");
+                if (Grid != null) await Grid.Refresh();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się usunąć: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sieci: {ex.Message}");
+            UI.ShowToast("Wystąpił błąd połączenia z serwerem.", "error");
+        }
+    }
+}

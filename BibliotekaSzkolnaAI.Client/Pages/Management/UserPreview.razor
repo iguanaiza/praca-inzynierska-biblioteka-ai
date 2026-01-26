@@ -1,0 +1,302 @@
+﻿@page "/panel/uzytkownicy/lista/szczegoly/{UserId}"
+
+@layout ManagementLayout
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+
+@if (IsLoading)
+{
+    <div class="text-center mt-5" role="status">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2"><em>Ładowanie profilu użytkownika...</em></p>
+    </div>
+}
+else if (user is not null)
+{
+    <div class="card shadow border-0 m-4">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom py-2 text-white">@user.FullName</h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 m-auto">
+                    <button class="btn btn-primary btn-lg" @onclick="GoBack">
+                        <i class="bi bi-arrow-bar-left"></i> Powrót
+                    </button>
+
+                    <div class="d-flex flex-row align-items-end">
+                        <a href="/panel/uzytkownicy/lista/edytuj/@user.Id?returnUrl=/panel/uzytkownicy/szczegoly/@user.Id"
+                           class="btn btn-primary btn-sm">
+                            <i class="bi bi-pencil"></i> Edytuj
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4 shadow-sm">
+                <div class="row g-0">
+                    <div class="col-md-3 d-flex justify-content-center align-items-center p-3 bg-light">
+                        @if (string.IsNullOrEmpty(user.ProfilePictureUrl))
+                        {
+                            <div class="text-center text-muted">
+                                <i class="bi bi-person-circle display-1"></i>
+                                <p class="mt-2 small">Brak zdjęcia</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <img src="@(GetFullImageUrl(user.ProfilePictureUrl))"
+                                 alt="Zdjęcie @user.FullName"
+                                 class="img-fluid rounded-circle shadow-sm"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                        }
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 border-bottom pb-2">
+                                <div class="d-flex gap-2">
+                                    @foreach (var role in user.Roles)
+                                    {
+                                        <span class="badge bg-primary">@role</span>
+                                    }
+                                </div>
+                                <span class="badge bg-info text-dark">@user.UserType</span>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-4 text-secondary">Email:</dt>
+                                        <dd class="col-sm-8 fw-bold">@user.Email</dd>
+
+                                        <dt class="col-sm-4 text-secondary">Telefon:</dt>
+                                        <dd class="col-sm-8">@(user.PhoneNumber ?? "-")</dd>
+
+                                        <dt class="col-sm-4 text-secondary">PESEL:</dt>
+                                        <dd class="col-sm-8">@user.Pesel</dd>
+
+                                        @if (!string.IsNullOrEmpty(user.Class))
+                                        {
+                                            <dt class="col-sm-4 text-secondary">Klasa:</dt>
+                                            <dd class="col-sm-8">@user.Class</dd>
+                                        }
+                                    </dl>
+                                </div>
+                                <div class="col-md-6 border-start ps-md-4">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5 text-secondary">Dołączył:</dt>
+                                        <dd class="col-sm-7">@user.DateAdded.ToShortDateString()</dd>
+
+                                        <dt class="col-sm-5 text-secondary">Biblioteka:</dt>
+                                        <dd class="col-sm-7">ID: @user.LibraryId</dd>
+
+                                        <dt class="col-sm-5 text-secondary">Naliczone kary:</dt>
+                                        <dd class="col-sm-7 @(user.FineAmount > 0 ? "text-danger fw-bold" : "")">
+                                            @user.FineAmount.ToString("0.00") zł
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="currentLoans" class="mt-2">
+            <div class="card-header bg-secondary text-white py-2 mx-4 rounded-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="m-0"><i class="bi bi-book"></i> Bieżące wypożyczenia (@CurrentLoans.Count)</h5>
+                </div>
+            </div>
+
+            <div class="card-body px-4 pt-0 pb-4">
+                <div class="border border-top-0 rounded-bottom p-3 shadow-sm">
+                    @if (CurrentLoans.Any())
+                    {
+                        int index = 1;
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Tytuł</th>
+                                        <th scope="col">Autor</th>
+                                        <th scope="col">Data wypożyczenia</th>
+                                        <th scope="col">Termin zwrotu</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var loan in CurrentLoans)
+                                    {
+                                        bool isOverdue = loan.DueDate.HasValue && loan.DueDate.Value.Date < DateTime.Now.Date;
+                                        string rowClass = isOverdue ? "table-danger" : "";
+
+                                        <tr class="@rowClass">
+                                            <th scope="row">@index</th>
+                                            <td class="fw-bold">@loan.Title</td>
+                                            <td>@loan.Author</td>
+                                            <td>@loan.BorrowDate.ToShortDateString()</td>
+                                            <td>
+                                                @(loan.DueDate.HasValue? loan.DueDate.Value.ToShortDateString() : "-")
+                                            </td>
+                                            <td>
+                                                @if (isOverdue)
+                                                {
+                                                    var days = (DateTime.Now.Date - loan.DueDate.Value.Date).Days;
+                                                    <span class="badge bg-danger">Po terminie (@days dni)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">W terminie</span>
+                                                    @if (loan.WasProlonged)
+                                                    {
+                                                        <span class="badge bg-warning text-dark ms-1">Przedłużona</span>
+                                                    }
+                                                }
+                                            </td>
+                                        </tr>
+                                        index++;
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle display-4 d-block mb-2"></i>
+                            Brak aktywnych wypożyczeń.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div id="archivedLoans" class="mt-2 mb-5">
+            <div class="card-header bg-light text-secondary py-2 mx-4 border rounded-top">
+                <h5 class="m-0 h6"><i class="bi bi-clock-history"></i> Historia wypożyczeń (@ArchivedLoans.Count)</h5>
+            </div>
+
+            <div class="card-body px-4 pt-0">
+                <div class="border border-top-0 rounded-bottom p-3 bg-light bg-opacity-10">
+                    @if (ArchivedLoans.Any())
+                    {
+                        int index = 1;
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped text-muted mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Tytuł</th>
+                                        <th scope="col">Data wypożyczenia</th>
+                                        <th scope="col">Data zwrotu</th>
+                                        <th scope="col">Kara</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var loan in ArchivedLoans)
+                                    {
+                                        <tr>
+                                            <th scope="row">@index</th>
+                                            <td>@loan.Title</td>
+                                            <td>@loan.BorrowDate.ToShortDateString()</td>
+                                            <td>@(loan.ReturnDate.HasValue? loan.ReturnDate.Value.ToShortDateString() : "-")</td>
+                                            <td>
+                                                <span class="@(loan.PenaltyAmount > 0 ? "text-danger fw-bold" : "")">@loan.PenaltyAmount.ToString("0.00") zł</span>
+                                            </td>
+                                        </tr>
+                                        index++;
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center my-2 small">Brak historii wypożyczeń.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (LoadError)
+{
+    <div class="alert alert-danger m-4 text-center" role="alert">
+        <h2>Błąd</h2>
+        <p>Nie udało się załadować danych użytkownika.</p>
+        <button class="btn btn-primary" @onclick="GoBack">Powrót</button>
+    </div>
+}
+
+@code {
+    [Parameter] public string? UserId { get; set; }
+
+    private UserDetailedDto? user;
+    private bool IsLoading = true;
+    private bool LoadError = false;
+
+    private List<LoanGetDto> CurrentLoans = new();
+    private List<LoanGetDto> ArchivedLoans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            LoadError = false;
+
+            if (!string.IsNullOrEmpty(UserId))
+            {
+                user = await Http.GetFromJsonAsync<UserDetailedDto>($"api/management/users/details/{UserId}");
+
+                if (user != null)
+                {
+                    CurrentLoans = user.Loans
+                        .Where(l => !l.IsReturned)
+                        .OrderBy(l => l.DueDate) 
+                        .ToList();
+
+                    ArchivedLoans = user.Loans
+                        .Where(l => l.IsReturned)
+                        .OrderByDescending(l => l.ReturnDate)
+                        .ToList();
+                }
+                else
+                {
+                    LoadError = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd: {ex.Message}");
+            LoadError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/panel/uzytkownicy/lista");
+    }
+
+    private string GetFullImageUrl(string relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath)) return "";
+        var apiBaseUrl = Configuration["ApiBaseUrl"];
+        return $"{apiBaseUrl?.TrimEnd('/')}/{relativePath.TrimStart('/')}";
+    }
+}

@@ -1,0 +1,66 @@
+﻿@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<nav class="catalog-navbar navbar navbar-expand-md" aria-label="Pasek nawigacji">
+    <div class="container-fluid">
+        <a class="d-flex align-items-center theme-font-color a-logo" href="/">
+            <img src="/images/school-logo.png" class="img-thumbnail p-2 img-logo" alt="" />
+
+            <span class="text-wrap text-center p-2"> Biblioteka Szkoły <br> Podstawowej nr&nbsp;123 <br> w&nbsp;Testach</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Rozwiń menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse text-nowrap justify-content-end" id="navbarCollapse">
+            <div class="d-flex flex-column align-items-end">
+                <ul class="navbar-nav mb-2 mb-md-0 d-flex flex-row">
+                     <AuthorizeView Roles="Admin,Librarian">
+                        <li class="nav-item">
+                            <a href="/" class="nav-link p-2 theme-font-color btn btn-nav">
+                                <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Przejdź do katalogu
+                            </a>
+                        </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link p-2 theme-font-color btn btn-nav" href="">
+                                    <i class="bi bi-person-circle" aria-hidden="true"></i> Cześć, @context?.User?.FindFirst(ClaimTypes.GivenName)?.Value!
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                    
+                                <button type="button" class="nav-link p-2 theme-font-color btn btn-nav" @onclick="HandleLogout">
+                                    Wyloguj <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                                </button>
+                    
+                            </li>
+                     </AuthorizeView>
+                </ul>
+
+                <ul class="navbar-nav d-flex flex-row">
+                    <AccessibilityPanel />
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private async Task HandleLogout()
+    {
+        var result = await Http.PostAsJsonAsync("auth/logout", new { });
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            Console.WriteLine("Błąd podczas wylogowywania.");
+        }
+    }
+}

@@ -1,0 +1,274 @@
+﻿.chatbot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    font-family: sans-serif;
+}
+
+.chat-icon {
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary);
+    color: var(--font-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: background 0.2s ease;
+}
+
+    .chat-icon:hover {
+        background-color: var(--primary-75);
+    }
+
+.chat-window {
+    width: 400px;
+    height: 500px;
+    background-color: var(--background);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.chat-header {
+    background-color: var(--primary);
+    color: var(--font-secondary);
+    padding: 10px 12px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--font-secondary);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    background-color: var(--secondary-25);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: thin;
+}
+
+    .chat-messages::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background-color: var(--primary-50);
+        border-radius: 4px;
+    }
+
+.chat-message-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+    .chat-message-wrapper.bot {
+        justify-content: flex-start;
+        flex-direction: row;
+    }
+
+    .chat-message-wrapper.user {
+        justify-content: flex-end;
+        flex-direction: row;
+    }
+
+.chat-icon-bubble {
+    font-size: 20px;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    line-height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-message {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    display: inline-block;
+    flex-shrink: 1;
+}
+
+    .chat-message.user {
+        background-color: var(--chat-user-bg);
+        color: var(--chat-user-text);
+        text-align: left;
+        border: var(--chat-user-border);
+    }
+
+    .chat-message.bot {
+        background-color: var(--chat-bot-bg);
+        color: var(--chat-bot-text);
+        text-align: left;
+    }
+
+.chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--primary-25);
+    background-color: var(--background);
+}
+
+    .chat-input input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid var(--primary-50);
+        border-radius: 6px;
+        margin-right: 8px;
+        font-size: 14px;
+    }
+
+    .chat-input button {
+        background-color: var(--primary);
+        color: var(--font-secondary);
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+        .chat-input button:hover {
+            background-color: var(--primary-75);
+        }
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 16px;
+    width: fit-content;
+    min-height: 24px;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--font-secondary);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: typingAnimation 1.4s infinite ease-in-out both;
+}
+
+    .typing-dot:nth-child(1) {
+        animation-delay: -0.32s;
+    }
+
+    .typing-dot:nth-child(2) {
+        animation-delay: -0.16s;
+    }
+
+@keyframes typingAnimation {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+
+    40% {
+        transform: scale(1);
+    }
+}
+
+::deep .chat-link {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.chat-message.bot ::deep .chat-link {
+    color: var(--primary);
+    text-decoration-color: rgba(5, 80, 85, 0.3);
+}
+
+    .chat-message.bot ::deep .chat-link:hover, .chat-message.bot ::deep .chat-link:focus {
+        background-color: rgba(5, 80, 85, 0.1);
+        color: #000000;
+        text-decoration-color: var(--primary);
+        border-radius: 4px;
+        padding: 0 4px;
+        margin: 0 -4px;
+    }
+
+.chat-message.user ::deep .chat-link {
+    color: #FFFFFF;
+    text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+    .chat-message.user ::deep .chat-link:hover, .chat-message.user ::deep .chat-link:focus {
+        color: var(--secondary);
+        text-decoration-color: var(--secondary);
+    }
+
+.theme-contrast .chat-message.bot ::deep .chat-link {
+    color: #000000 !important;
+    text-decoration: underline;
+    font-weight: 900;
+    border-bottom: 1px solid #000000;
+}
+
+    .theme-contrast .chat-message.bot ::deep .chat-link:hover, .theme-contrast .chat-message.bot ::deep .chat-link:focus {
+        background-color: #000000;
+        color: #FFFF00 !important;
+        text-decoration: none;
+    }
+
+.theme-contrast .chat-message.user ::deep .chat-link {
+    color: #FFFF00 !important;
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .chat-window {
+        width: 90vw;
+        height: 70vh;
+        bottom: 80px; 
+        right: 5vw;
+        border-radius: 12px; 
+    }
+
+    .chatbot-container {
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 0;
+    }
+
+    .chat-icon {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+    }
+}

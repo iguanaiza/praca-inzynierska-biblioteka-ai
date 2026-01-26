@@ -1,0 +1,327 @@
+﻿@page "/konto/wypozyczenia"
+@layout CatalogLayout
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject GlobalUiService UI
+
+<PageTitle>Wypożyczone książki</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie katalogu" />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+else
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom">Wypożyczone książki</h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">@successMessage</div>
+            }
+
+            @if (allLoans != null && allLoans.Any())
+            {
+                <ul class="nav nav-tabs" id="loansTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-active" data-bs-toggle="tab" data-bs-target="#pane-active" type="button" role="tab" aria-controls="pane-active" aria-selected="true">
+                            Bieżące (@activeLoans.Count)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-returned" data-bs-toggle="tab" data-bs-target="#pane-returned" type="button" role="tab" aria-controls="pane-returned" aria-selected="false">
+                            Zakończone (@returnedLoans.Count)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="loansTabsContent">
+
+                    <div class="tab-pane fade show active" id="pane-active" role="tabpanel" aria-labelledby="tab-active">
+                        @if (!activeLoans.Any())
+                        {
+                            <p class="p-3 text-center" role="status">Brak bieżących wypożyczeń.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="tbl-cat table-hover" aria-label="Bieżące wypożyczenia">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col"><span class="visually-hidden">Szczegóły</span></th>
+                                            <th scope="col">Tytuł</th>
+                                            <th scope="col">Autor</th>
+                                            <th scope="col">Wydawca</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Termin zwrotu</th>
+                                            <th scope="col">Kara</th>
+                                            <th scope="col" class="text-end">Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var loan in activeLoans)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <a href="/katalog/szczegoly/@loan.BookId?ReturnUrl=/konto/wypozyczenia"
+                                                       class="btn btn-outline-primary btn-sm"
+                                                       aria-label="Szczegóły dla @loan.Title">
+                                                        <i class="bi bi-info-square" aria-hidden="true"></i>
+                                                    </a>
+                                                </td>
+
+                                                <td>@loan.Title</td>
+                                                <td>@loan.Author</td>
+                                                <td>@loan.BookPublisher</td>
+
+                                                <td>
+                                                    <span class="badge @GetStatusBadge(loan.Status)" title="@GetStatusName(loan.Status)">
+                                                        @GetStatusName(loan.Status)
+                                                    </span>
+                                                    @if (loan.WasProlonged)
+                                                    {
+                                                        <span class="badge bg-secondary" title="Przedłużono"><i class="bi bi-clock-history"></i></span>
+                                                    }
+                                                </td>
+                                                <td class="@(loan.Status == LoanStatus.Overdue ? "text-danger fw-bold" : "")">
+                                                    @loan.DueDate?.ToString("d MMM yyyy")
+                                                </td>
+                                                <td class="fw-bold @(loan.PenaltyAmount > 0 ? "text-danger" : "")">
+                                                    @loan.PenaltyAmount.ToString("0.00 'zł'")
+                                                </td>
+
+                                                <td class="text-end">
+                                                    <div class="d-flex gap-2 justify-content-end">
+                                                        <button class="btn btn-outline-primary btn-sm"
+                                                                disabled="@(loan.Status != LoanStatus.Active || loan.WasProlonged)"
+                                                                @onclick="() => ProlongLoanAsync(loan)"
+                                                                title="@(loan.WasProlonged ? "Już raz przedłużono" : "Przedłuż o 30 dni")">
+                                                            <i class="bi bi-calendar-plus"></i> <span class="d-none d-lg-inline">Przedłuż</span>
+                                                        </button>
+
+                                                        <button class="btn btn-primary btn-sm"
+                                                                disabled="@(loan.Status != LoanStatus.Active && loan.Status != LoanStatus.Overdue)"
+                                                                @onclick="() => RequestReturnAsync(loan)"
+                                                                title="Zgłoś zwrot książki">
+                                                            <i class="bi bi-box-arrow-down"></i> <span class="d-none d-lg-inline">Zwróć</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="tab-pane fade" id="pane-returned" role="tabpanel" aria-labelledby="tab-returned">
+                        @if (!returnedLoans.Any())
+                        {
+                            <p class="p-3 text-center" role="status">Brak zakończonych wypożyczeń.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="tbl-cat table-hover" aria-label="Zakończone wypożyczenia">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col"><span class="visually-hidden">Szczegóły</span></th>
+                                            <th scope="col">Tytuł</th>
+                                            <th scope="col">Autor</th>
+                                            <th scope="col">Wydawca</th>
+                                            <th scope="col">Data zwrotu</th>
+                                            <th scope="col">Naliczona kara</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var loan in returnedLoans)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <a href="/katalog/szczegoly/@loan.BookId?ReturnUrl=/konto/wypozyczenia"
+                                                       class="btn btn-outline-primary btn-sm"
+                                                       aria-label="Szczegóły dla @loan.Title">
+                                                        <i class="bi bi-info-square" aria-hidden="true"></i>
+                                                    </a>
+                                                </td>
+                                                <td>@loan.Title</td>
+                                                <td>@loan.Author</td>
+                                                <td>@loan.BookPublisher</td>
+                                                <td>@loan.ReturnDate?.ToString("d MMM yyyy")</td>
+                                                <td>@loan.PenaltyAmount.ToString("0.00 'zł'")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="p-3 text-center" role="status">Nie masz historii wypożyczeń.</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsLoading = true;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private List<LoanGetDto> allLoans = new();
+    private List<LoanGetDto> activeLoans = new();
+    private List<LoanGetDto> returnedLoans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLoans();
+    }
+
+    private async Task LoadLoans()
+    {
+        IsLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            allLoans = await Http.GetFromJsonAsync<List<LoanGetDto>>("api/loans/my-loans?activeOnly=false");
+
+            if (allLoans != null)
+            {
+                activeLoans = allLoans
+                    .Where(l => l.Status != LoanStatus.Returned)
+                    .OrderBy(l => l.DueDate)
+                    .ToList();
+
+                returnedLoans = allLoans
+                    .Where(l => l.Status == LoanStatus.Returned)
+                    .OrderByDescending(l => l.ReturnDate)
+                    .ToList();
+            }
+            else
+            {
+                allLoans = new();
+                activeLoans = new();
+                returnedLoans = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd podczas ładowania wypożyczeń: {ex.Message}";
+            allLoans = new();
+            activeLoans = new();
+            returnedLoans = new();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetStatusName(LoanStatus status)
+    {
+        return status switch
+        {
+            LoanStatus.PendingApproval => "Czeka na akceptację",
+            LoanStatus.Active => "Aktywne",
+            LoanStatus.Overdue => "PO TERMINIE",
+            LoanStatus.PendingReturn => "Oczekuje na zwrot",
+            LoanStatus.Returned => "Zwrócono",
+            _ => "Nieznany"
+        };
+    }
+
+    private string GetStatusBadge(LoanStatus status)
+    {
+        return status switch
+        {
+            LoanStatus.PendingApproval => "bg-info text-dark",
+            LoanStatus.Active => "bg-success",
+            LoanStatus.Overdue => "bg-danger",
+            LoanStatus.PendingReturn => "bg-warning text-dark",
+            LoanStatus.Returned => "bg-secondary",
+            _ => "bg-dark"
+        };
+    }
+
+    private async Task ProlongLoanAsync(LoanGetDto loan)
+    {
+        bool confirmed = await UI.ConfirmAsync("Prolongata", $"Czy na pewno chcesz przedłużyć termin zwrotu książki '{loan.Title}' o 30 dni?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PostAsync($"api/loans/prolong/{loan.Id}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Termin został pomyślnie przedłużony.");
+                await LoadLoans();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się przedłużyć terminu: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    private async Task RequestReturnAsync(LoanGetDto loan)
+    {
+        bool confirmed = await UI.ConfirmAsync("Zwrot książki", $"Czy na pewno chcesz zgłosić zwrot książki '{loan.Title}'?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PostAsync($"api/loans/return/{loan.Id}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Zgłoszono prośbę o zwrot. Książka czeka na akceptację bibliotekarza.");
+                await LoadLoans();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się zgłosić zwrotu: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

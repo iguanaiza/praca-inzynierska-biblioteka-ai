@@ -1,0 +1,145 @@
+﻿@page "/podreczniki"
+@layout CatalogLayout
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Lista lektur SP 123 w Testach</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie katalogu" />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+
+else
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom">Lista podręczników</h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+
+            @if (TextBooks != null && TextBooks.Any())
+            {
+                <!-- Nawigacja zakładek -->
+                <ul class="nav nav-tabs" id="bookTabs" role="tablist">
+                    @for (int i = 0; i < ClassList.Length; i++)
+                    {
+                        var activeClass = (i == 0) ? "active" : "";
+                        var selected = (i == 0) ? "true" : "false";
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @activeClass" id="tab-@i" data-bs-toggle="tab" data-bs-target="#pane-@i" type="button" role="tab" aria-controls="pane-@i" aria-selected="@selected">Klasa @ClassList[i]</button>
+                        </li>
+                    }
+                </ul>
+
+                <!-- Zawartość zakładek -->
+                <div class="tab-content" id="bookTabsContent">
+                    @for (int i = 0; i < ClassList.Length; i++)
+                    {
+                        var showClass = (i == 0) ? "show active" : "";
+
+                        <div class="tab-pane fade @showClass" id="pane-@i" role="tabpanel" aria-labelledby="tab-@i">
+                            @{
+                                var books = TextBooks.Where(b => b.Class == ClassList[i]).Select((book, j) => new { Book = book, Index = j + 1 });
+                            }
+
+                            @if (books.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="tbl-cat table-hover">
+                                        <caption class="visually-hidden">Lista podręczników dla klasy @ClassList[i]</caption>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col"><span class="visually-hidden">Akcje</span></th>
+                                                <th scope="col">#</th>
+                                                <th scope="col">Klasa</th>
+                                                <th scope="col"> Przedmiot</th>
+                                                <th scope="col">Autor</th>
+                                                <th scope="col">Tytuł</th>
+                                                <th scope="col">Wydawca</th>
+                                                <th scope="col">Dostępnych</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in books)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <a href="/podreczniki/szczegoly/@item.Book.Id?returnUrl=/podreczniki"
+                                                           class="btn btn-outline-primary btn-sm"
+                                                           aria-label="Szczegóły dla @item.Book.Title">
+
+                                                            <i class="bi bi-info-square" aria-hidden="true"></i>
+                                                        </a>
+                                                    </td>
+                                                    <td class="td-center fw-bold">@item.Index</td>
+                                                    <td class="td-center">@item.Book.Class</td>
+                                                    <td class="td-center">@item.Book.Subject</td>
+                                                    <td>@item.Book.BookAuthor</td>
+                                                    <td>@item.Book.Title</td>
+                                                    <td>@item.Book.BookPublisher</td>
+                                                    <td>@item.Book.AvailableCopyCount</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="p-3 text-center" role="status">Brak podręczników dla klas @ClassList[i].</p>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="p-3 text-center" role="status">Brak podręczników do wyświetlenia.</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    public List<BookGetForListDto> TextBooks { get; set; } = new();
+
+    string[] ClassList = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            TextBooks = await Http.GetFromJsonAsync<List<BookGetForListDto>>("api/catalog/textbooks");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania danych strony głównej: {ex.Message}");
+            TextBooks = new();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

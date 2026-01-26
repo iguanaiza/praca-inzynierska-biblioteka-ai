@@ -1,0 +1,137 @@
+﻿@page "/konto/zaloguj"
+@layout CatalogLayout
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Logowanie do katalogu biblioteki SP 123 w Testach</PageTitle>
+
+<h1 class="visually-hidden">Strona logowania</h1>
+
+<div class="mb-4 mt-4 p-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 p-4 card">
+            <section>
+                <h2>Zaloguj się</h2>
+
+                <p class="theme-font-col-pri">
+                    Aby otrzymać dane logowania, skontaktuj się z biblioteką.<br />
+                    Tylko zalogowani użytkownicy mogą wypożyczać książki przez katalog online.<br /> 
+                </p>
+
+                <div>
+                    <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <div class="form-floating mb-3">
+                            <InputText type="email" class="form-control" id="email" @bind-Value="loginModel.Email" placeholder="imie.nazwisko@sp123testy.edu.pl" />
+                            <label for="email" class="form-label">Email</label>
+                            <ValidationMessage For="@(() => loginModel.Email)" />
+                        </div>
+
+                        <div class="form-floating mb-3 position-relative">
+                            <InputText type="@PasswordInputType"
+                                       class="form-control"
+                                       id="password"
+                                       @bind-Value="loginModel.Password"
+                                       placeholder="Hasło"
+                                       style="padding-right: 40px;" />
+
+                            <label for="password" class="form-label">Hasło</label>
+
+                            <span class="position-absolute top-50 end-0 translate-middle-y pe-3 text-secondary"
+                                  @onclick="TogglePasswordVisibility"
+                                  style="cursor: pointer; z-index: 5;">
+                                <i class="@PasswordIconClass"></i>
+                            </span>
+
+                            <ValidationMessage For="@(() => loginModel.Password)" />
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <InputCheckbox class="form-check-input" id="rememberMe" @bind-Value="loginModel.RememberMe" />
+                            <label class="form-label theme-font-col-pri" for="rememberMe">
+                                Zapamiętaj mnie
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="submit" class="w-100 btn btn-lg btn-primary" disabled="@isBusy">
+                                @if (isBusy)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span> Logowanie...</span>
+                                }
+                                else
+                                {
+                                    <span>Zaloguj</span>
+                                }
+                            </button>
+                        </div>
+
+                    </EditForm>
+                </div>
+
+                <p class="theme-font-col-pri mt-2">
+                    Jeśli napotkasz problemy techniczne lub nie wiesz jak skorzystać z systemu, zgłoś się do biblioteki lub wyślij wiadomość na adres: <a href="mailto:biblioteka@sp123testy.edu.pl">biblioteka@sp123testy.edu.pl</a> <br />
+                    Dodatkowa pomoc jest dostępna w zakładce <a href="/pomoc">POMOC</a>. <br/> <br/>
+                </p>
+            </section>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private LoginRequestDto loginModel = new();
+    private string? errorMessage;
+    private bool isBusy = false;
+    private bool isPasswordVisible = false;
+    private string PasswordInputType => isPasswordVisible ? "text" : "password";
+    private string PasswordIconClass => isPasswordVisible ? "bi bi-eye-slash-fill" : "bi bi-eye-fill";
+
+    private async Task HandleLogin()
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await Http.PostAsJsonAsync("auth/login", loginModel);
+
+            if (result.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Logowanie nie powiodło się. Sprawdź email i hasło.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Nie można połączyć się z serwerem: {ex.Message}";
+        }
+
+        isBusy = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+    }
+}

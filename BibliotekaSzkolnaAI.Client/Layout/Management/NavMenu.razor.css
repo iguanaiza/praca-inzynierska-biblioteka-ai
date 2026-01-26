@@ -1,0 +1,133 @@
+.navmenu {
+    background-color: var(--primary-75);
+    color: var(--font-secondary);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar-toggler {
+    background-color: var(--primary-25);
+    color: var(--font-secondary);
+    margin: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.nav-item {
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+
+    .nav-item:first-of-type {
+        padding-top: 1rem;
+    }
+
+    .nav-item:last-of-type {
+        padding-bottom: 2rem;
+    }
+
+    .nav-item ::deep .nav-link {
+        color: var(--font-secondary);
+        background: none;
+        border: none;
+        border-radius: 6px;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        line-height: 1.5;
+        width: 100%;
+        transition: all 0.2s ease-in-out;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+        .nav-item ::deep .nav-link:hover,
+        .nav-item .nav-link-custom:hover {
+            background-color: var(--primary-25);
+            color: var(--font-secondary);
+        }
+
+        .nav-item ::deep .nav-link.active {
+            background-color: var(--primary-25);
+            color: var(--font-secondary);
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+.submenu ::deep .nav-link {
+    height: 2.4rem;
+    font-size: 0.9rem;
+    color: var(--font-secondary);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 6px 6px 0;
+    padding-left: 2rem;
+    margin-left: 1rem;
+}
+
+    .submenu ::deep .nav-link:hover {
+        background-color: var(--primary-25);
+        color: var(--font-secondary);
+        border-left-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .submenu ::deep .nav-link.active {
+        background-color: var(--primary-25);
+        border-left: 3px solid #fff;
+        color: var(--font-secondary);
+        font-weight: 600;
+    }
+
+.cursor-pointer {
+    cursor: pointer;
+    user-select: none;
+}
+
+.animate-slide {
+    animation: slideDown 0.3s cubic-bezier(0.25, 0.8, 0.5, 1) forwards;
+    transform-origin: top;
+    overflow: hidden;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+        max-height: 0;
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 640.98px) {
+    .navmenu {
+        height: auto; 
+    }
+
+    .collapse {
+        display: none;
+    }
+
+        .collapse.show {
+            display: block;
+        }
+}
+
+@media (min-width: 641px) {
+    .navbar-toggler {
+        display: none; 
+    }
+
+    .collapse {
+        display: block !important;
+        height: 100%;
+        overflow-y: auto; 
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.3) transparent;
+    }
+}

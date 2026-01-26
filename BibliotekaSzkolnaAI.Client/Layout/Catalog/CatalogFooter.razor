@@ -1,0 +1,35 @@
+﻿@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<div class="catalog-footer p-3 mt-auto">
+    <div class="row justify-content-center align-items-center text-center text-md-start">
+
+        <div class="col-12 col-md-auto mb-3 mb-md-0">
+            <button class="btn btn-outline-secondary" @onclick="ClearClientStorage">
+                Czyszczenie pamięci
+            </button>
+        </div>
+
+        <div class="col-12 col-md d-flex flex-column align-items-center">
+
+            <p class="mb-2 theme-font-color">
+                System 2025 - katalog online - dostęp dla czytelników bibliotek szkolnych
+            </p>
+
+            <nav aria-label="Menu pomocnicze stopki">
+                <ul class="d-flex flex-wrap justify-content-center gap-3 list-unstyled mb-0">
+                    <li><a href="/kontakt" class="text-decoration-none theme-font-color">KONTAKT GODZINY OTWARCIA</a></li>
+                    <li><a href="/pomoc" class="text-decoration-none theme-font-color">POMOC</a></li>
+                    <li><a href="/mapa-strony" class="text-decoration-none theme-font-color">MAPA STRONY</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@code {
+    private async Task ClearClientStorage()
+    {
+        await JS.InvokeVoidAsync("clearClientStorage");
+    }
+}

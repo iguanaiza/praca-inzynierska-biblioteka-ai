@@ -1,0 +1,538 @@
+﻿@page "/katalog"
+@page "/szukaj"
+
+@layout CatalogLayout
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IConfiguration Configuration
+
+<PageTitle>Katalog biblioteki SP 123 w Testach</PageTitle>
+
+@if (string.IsNullOrWhiteSpace(SearchTerm))
+{
+    <h1 class="visually-hidden">Katalog biblioteki</h1>
+}
+
+else
+{
+    <h1 class="visually-hidden">Wyniki wyszukiwania</h1>
+}
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie katalogu" />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+
+else 
+{
+    <div class="row gx-4">
+        <div class="col-lg-9">
+            <button class="btn btn-outline-primary d-lg-none mb-3 w-100" 
+                    type="button" 
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#filtersOffcanvas" 
+                    aria-controls="filtersOffcanvas"
+                    aria-expanded="false">
+
+                    <i class="bi bi-funnel" aria-hidden="true"></i> Pokaż Filtry
+            </button>
+
+            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded shadow-sm">
+
+                <div class="text-muted small ms-2">
+                    Znaleziono: <strong>@(pagedResult?.TotalCount ?? 0)</strong>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <label for="sortSelect" class="form-label mb-0 small fw-bold text-nowrap d-none d-sm-block">Sortuj:</label>
+                    <select id="sortSelect" class="form-select form-select-sm"
+                            style="width: auto; min-width: 180px;"
+                            value="@CurrentSortValue"
+                            @onchange="OnSortChanged">
+
+                        <option value="title_asc">Tytuł (A-Z)</option>
+                        <option value="title_desc">Tytuł (Z-A)</option>
+                        <option value="year_desc">Najnowsze (Rok)</option>
+                        <option value="year_asc">Najstarsze (Rok)</option>
+                        <option value="bookauthor_asc">Autor (A-Z)</option>
+                        <option value="bookauthor_desc">Autor (Z-A)</option>
+                    </select>
+                </div>
+            </div>
+
+            @if (SearchTerm is not null) {
+            <p>Wyniki dla frazy: "@SearchTerm"</p>
+            }
+
+            @if (pagedResult is null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    Wystąpił krytyczny błąd podczas ładowania danych, błąd połączenia z API.
+                </div>
+            }
+
+            else if (pagedResult.Items.Any())
+            {
+                @foreach (var book in pagedResult.Items)
+                {
+                    <div class="card mb-3 shadow-sm theme-font-col-pri">
+                        <div class="row g-0">
+                            <!-- Okładka książki-->
+                            <div class="col-md-3 d-flex justify-content-center align-items-center p-2">
+                                <img src="@(GetFullImageUrl(book.ImageUrl))" alt="Okładka: @book.Title" class="img-fluid rounded-start img-catalog">
+                            </div>
+                            <div class="col-md-9">
+                                <div class="card-body d-flex flex-column h-100">
+                                    <!-- Sekcja "Ulubione": licznik i przycisk-->
+                                    <div class="d-flex justify-content-between">
+                                        <span class="d-flex align-items-center"
+                                              style="font-size: 0.8rem;">
+                                            Na półce u:&nbsp <strong>@book.FavoriteCount</strong>&nbsp@(book.FavoriteCount == 1 ? "osoby" : "osób")
+                                        </span>
+                                        <!--Widoki autoryzowane (dodanie do ulubionych)-->
+                                        <AuthorizeView>
+                                            <Authorized>
+                                                <button class="btn btn-sm @(book.IsFavorite ? "btn-outline-primary" : "btn-primary")"
+                                                        @onclick="() => ToggleFavorite(book)">
+                                                    <i class="bi @(book.IsFavorite ? "bi-bookmark-dash" : "bi-bookmark-star")"
+                                                       aria-hidden="true"></i> @(book.IsFavorite ? " Usuń z półki" : " Dodaj na półkę")
+                                                </button>
+                                            </Authorized>
+                                            <NotAuthorized>
+                                                <button class="btn btn-sm btn-outline-secondary" disabled title="Zaloguj się, aby dodać na półkę">
+                                                    <i class="bi bi-bookmark-star" aria-hidden="true"></i>
+                                                </button>
+                                            </NotAuthorized>
+                                        </AuthorizeView>
+                                    </div>                             
+                                    <!--Szczegóły książki-->
+                                    <div>
+                                        <h2 class="card-title h2-custom">
+                                            <a href="@(SearchTerm is not null ? $"/szukaj/szczegoly/{book.Id}?ReturnUrl={encodedReturnUrl}" : $"/katalog/szczegoly/{book.Id}?ReturnUrl={encodedReturnUrl}")" class="link-underline-opacity-0">
+                                                @book.Title
+                                            </a>
+                                        </h2>
+                                        <p class="card-text"><small>@book.BookAuthor</small></p>
+                                        <p class="card-text truncate-3-lines">@book.Description</p>
+                                    </div>                                      
+                                    <!-- Ilość dostępnych sztuk i przycisk przejścia do strony szczegółów-->
+                                    <div class="d-flex justify-content-between align-items-center mt-auto pt-3">
+                                        <div>
+                                            <p class="card-text mb-0">
+                                                Dostępnych: <strong>@book.AvailableCopyCount sztuk</strong>
+                                            </p>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <a href="@(SearchTerm is not null ? $"/szukaj/szczegoly/{book.Id}?ReturnUrl={encodedReturnUrl}" : $"/katalog/szczegoly/{book.Id}?ReturnUrl={encodedReturnUrl}")" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-info-square" aria-hidden="true"></i>
+                                                <span class="d-none d-lg-inline"> Szczegóły</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                <!--Menu paginacji-->
+                <nav class="d-flex justify-content-center align-items-center gap-3 mt-4 theme-font-col-pri" aria-label="Paginacja wyników">
+                    <button class="btn btn-outline-primary" @onclick="() => ChangePage(pagedResult.PageNumber - 1)" disabled="@(!pagedResult.HasPreviousPage)">Poprzednia</button>
+                    <span role="status">Strona @pagedResult.PageNumber z @pagedResult.TotalPages</span>
+                    <button class="btn btn-outline-primary" @onclick="() => ChangePage(pagedResult.PageNumber + 1)" disabled="@(!pagedResult.HasNextPage)">Następna</button>
+                </nav>
+            }
+            else
+            {
+                @if (SearchTerm is not null)
+                {
+                    <div class="alert alert-warning" role="alert">Nie znaleziono żadnych wyników dla frazy: "@SearchTerm"</div>
+                }
+
+                else
+                {
+                    <div class="alert alert-warning" role="status">Brak wyników spełniających wybrane kryteria.</div>
+                }
+            }
+        </div>
+        <!--Filtry-->
+        <aside class="col-lg-3 d-none d-lg-block">
+            <div class="card p-3 shadow-sm w-100">
+                <div class="card p-3 shadow-sm">
+                    <h5 class="mb-3">Filtry</h5>
+                    <FiltersPanelComponent filterOptions="filterOptions"
+                                           queryParams="queryParams"
+                                           OnApplyFilters="ApplyFilters"
+                                           OnClearFilters="ClearFilters"/>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas" aria-labelledby="filtersOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="filtersOffcanvasLabel">Filtry</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Zamknij"></button>
+        </div>
+        <div class="offcanvas-body">
+            <h5 class="mb-3">Filtry</h5>
+
+            <FiltersPanelComponent filterOptions="filterOptions"
+                                   queryParams="queryParams"
+                                   OnApplyFilters="ApplyFilters"
+                                   OnClearFilters="ClearFilters" />
+        </div>
+    </div>
+}
+
+@code {
+    #region Parameters
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "searchTerm")]
+    public string? SearchTerm { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "pageNumber")]
+    public int PageNumber { get; set; } = 1;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "pageSize")]
+    public int PageSize { get; set; } = 10;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "sortBy")]
+    public string? SortBy { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "sortOrder")]
+    public string? SortOrder { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookGenres")]
+    public string[]? SelectedBookGenres { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookAuthors")]
+    public string[]? SelectedBookAuthors { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookCategories")]
+    public string[]? SelectedBookCategories { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookTypes")]
+    public string[]? SelectedBookTypes { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookPublishers")]
+    public string[]? SelectedBookPublishers { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "bookSeries")]
+    public string[]? SelectedBookSeries { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    #endregion
+
+    #region Injected Services
+ 
+    private string encodedReturnUrl = "";
+    private PagedResult<BookGetForCatalogDto>? pagedResult;
+    private FilterOptionsDto filterOptions = new();
+    private BookQueryParams queryParams = new();
+    private bool IsLoading = true;
+    private string? favoriteErrorMessage;
+    private string CurrentSortValue =>
+        $"{queryParams.SortBy?.ToLower() ?? "title"}_{queryParams.SortOrder?.ToLower() ?? "asc"}";
+
+    private HashSet<int> favoriteBookIds = new();
+    #endregion
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+
+        queryParams = new BookQueryParams
+        {
+            SearchTerm = this.SearchTerm,
+            PageNumber = this.PageNumber <= 0 ? 1 : this.PageNumber,
+            PageSize = this.PageSize <= 0 ? 10 : this.PageSize,
+            SortBy = this.SortBy,
+            SortOrder = this.SortOrder,
+            BookGenres = this.SelectedBookGenres?.ToList() ?? new List<string>(),
+            BookAuthors = this.SelectedBookAuthors?.ToList() ?? new List<string>(),
+            BookCategories = this.SelectedBookCategories?.ToList() ?? new List<string>(),
+            BookTypes = this.SelectedBookTypes?.ToList() ?? new List<string>(),
+            BookPublishers = this.SelectedBookPublishers?.ToList() ?? new List<string>(),
+            BookSeries = this.SelectedBookSeries?.ToList() ?? new List<string>()
+        };
+
+        var filterOptionsTask = LoadFilterOptionsAsync();
+        var booksTask = LoadBooksAsync(); 
+        var favoritesTask = LoadFavoriteIdsAsync();
+
+        await Task.WhenAll(filterOptionsTask, booksTask, favoritesTask);
+
+        if (pagedResult?.Items != null && favoriteBookIds.Any())
+        {
+            foreach (var book in pagedResult.Items)
+            {
+                book.IsFavorite = favoriteBookIds.Contains(book.Id);
+            }
+        }
+
+        string currentRelativeUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+
+        if (string.IsNullOrWhiteSpace(currentRelativeUrl) || currentRelativeUrl == "/")
+        {
+            currentRelativeUrl = "/katalog";
+        }
+        else if (!currentRelativeUrl.StartsWith("/"))
+        {
+            currentRelativeUrl = "/" + currentRelativeUrl;
+        }
+
+        encodedReturnUrl = Uri.EscapeDataString(currentRelativeUrl);
+
+        IsLoading = false;
+    }
+
+    private async Task LoadFilterOptionsAsync()
+    {
+        try
+        {
+            if (!filterOptions.Genres.Any())
+            {
+                filterOptions = (await Http.GetFromJsonAsync<FilterOptionsDto>("api/catalog/filter-options"))
+                            ?? new FilterOptionsDto();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd ładowania opcji filtrów: {ex.Message}");
+            filterOptions = new FilterOptionsDto();
+        }
+    }
+
+    private async Task LoadBooksAsync()
+    {
+        var queryString = BuildQueryString(); 
+        try
+        {
+            pagedResult = await Http.GetFromJsonAsync<PagedResult<BookGetForCatalogDto>>($"api/catalog/books{queryString}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd ładowania książek: {ex.Message}");
+            pagedResult = null; 
+        }
+    }
+
+    private async Task LoadFavoriteIdsAsync()
+    {
+        favoriteBookIds.Clear();
+        var authState = await AuthStateTask;
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            try
+            {
+                var ids = await Http.GetFromJsonAsync<List<int>>("api/favorites/ids");
+                if (ids != null)
+                {
+                    favoriteBookIds = new HashSet<int>(ids);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd ładowania ID ulubionych: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ToggleFavorite(BookGetForCatalogDto bookToToggle)
+    {
+        favoriteErrorMessage = null;
+
+        var authState = await AuthStateTask;
+        if (authState.User.Identity == null || !authState.User.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/login"); 
+            return;
+        }
+
+        try
+        {
+            if (bookToToggle.IsFavorite)
+            {
+                var response = await Http.DeleteAsync($"api/favorites/{bookToToggle.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    bookToToggle.IsFavorite = false;
+                    favoriteBookIds.Remove(bookToToggle.Id);
+
+                    if (bookToToggle.FavoriteCount > 0)
+                    {
+                        bookToToggle.FavoriteCount--;
+                    }
+                }
+                else
+                {
+                    favoriteErrorMessage = "Nie udało się usunąć z ulubionych.";
+                }
+            }
+
+            else
+            {
+                var response = await Http.PostAsync($"api/favorites/{bookToToggle.Id}", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    bookToToggle.IsFavorite = true;
+                    favoriteBookIds.Add(bookToToggle.Id);
+                    bookToToggle.FavoriteCount++;
+                }
+                else
+                {
+                    favoriteErrorMessage = "Nie udało się dodać do ulubionych.";
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            favoriteErrorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    private string BuildQueryString()
+    {
+        var sb = new StringBuilder();
+        sb.Append($"?pageNumber={queryParams.PageNumber}");
+        sb.Append($"&pageSize={queryParams.PageSize}");
+
+        if (!string.IsNullOrEmpty(queryParams.SearchTerm))
+        {
+            sb.Append($"&searchTerm={Uri.EscapeDataString(queryParams.SearchTerm)}");
+        }
+
+        if (!string.IsNullOrEmpty(queryParams.SortBy))
+        {
+            sb.Append($"&sortBy={queryParams.SortBy}");
+            if (!string.IsNullOrEmpty(queryParams.SortOrder))
+            {
+                sb.Append($"&sortOrder={queryParams.SortOrder}");
+            }
+        }
+
+        #region filters
+        if (queryParams.BookGenres != null)
+        {
+            foreach (var item in queryParams.BookGenres)
+                sb.Append($"&bookGenres={Uri.EscapeDataString(item)}");
+        }
+
+        if (queryParams.BookAuthors != null)
+        {
+            foreach (var item in queryParams.BookAuthors)
+                sb.Append($"&bookAuthors={Uri.EscapeDataString(item)}");
+        }
+
+        if (queryParams.BookCategories != null)
+        {
+            foreach (var item in queryParams.BookCategories)
+                sb.Append($"&bookCategories={Uri.EscapeDataString(item)}");
+        }
+
+        if (queryParams.BookTypes != null)
+        {
+            foreach (var item in queryParams.BookTypes)
+                sb.Append($"&bookTypes={Uri.EscapeDataString(item)}");
+        }
+
+        if (queryParams.BookPublishers != null)
+        {
+            foreach (var item in queryParams.BookPublishers)
+                sb.Append($"&bookPublishers={Uri.EscapeDataString(item)}");
+        }
+
+        if (queryParams.BookSeries != null)
+        {
+            foreach (var item in queryParams.BookSeries)
+                sb.Append($"&bookSeries={Uri.EscapeDataString(item)}");
+        }
+        #endregion
+
+        return sb.ToString();
+    }
+
+    private Task NavigateWithFilters()
+    {
+        var queryString = BuildQueryString();
+
+        string basePath = !string.IsNullOrWhiteSpace(queryParams.SearchTerm)
+        ? "/szukaj"
+        : "/katalog";
+
+        NavigationManager.NavigateTo($"{basePath}{queryString}");
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyFilters()
+    {
+        queryParams.PageNumber = 1;
+        await NavigateWithFilters();
+    }
+
+    private async Task ClearFilters()
+    {
+        queryParams = new BookQueryParams();
+        await NavigateWithFilters();
+    }
+
+    private async Task ChangePage(int pageNumber)
+    {
+        if (pagedResult is null || pageNumber < 1 || pageNumber > pagedResult.TotalPages)
+            return;
+
+        queryParams.PageNumber = pageNumber;
+        await NavigateWithFilters();
+    }
+
+    private string GetFullImageUrl(string? relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return "/images/no-cover.png";
+        }
+
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7069";
+        return $"{apiBaseUrl}{relativePath}";
+    }
+
+    private async Task OnSortChanged(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value?.ToString(); 
+
+        if (!string.IsNullOrEmpty(selectedValue))
+        {
+            var parts = selectedValue.Split('_'); 
+
+            if (parts.Length == 2)
+            {
+                queryParams.SortBy = parts[0];     
+                queryParams.SortOrder = parts[1];  
+
+                queryParams.PageNumber = 1;
+
+                await NavigateWithFilters();
+            }
+        }
+    }
+}

@@ -1,0 +1,204 @@
+﻿@page "/pomoc"
+@layout CatalogLayout
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Pomoc i instrukcja katalogu biblioteki SP 123 w Testach</PageTitle>
+
+<div class="card shadow border-0 mb-4 theme-font-col-pri">
+    <div class="card-header bg-theme bg-gradient py-3">
+        <h1 class="h2-custom text-center">Pomoc i instrukcja korzystania z systemu</h1>
+    </div>
+
+    <div class="card-body px-4">
+        <section class="mb-4">
+            <h2 class="mb-4 pb-2 border-bottom">1. Logowanie do systemu</h2>
+            <p>
+                Aby zalogować się do systemu bibliotecznego, należy posiadać konto założone przez bibliotekarza.
+                Dane logowania (login i hasło) przekazywane są uczniowi/osobie uprawnionej podczas pierwszego kontaktu z biblioteką.
+            </p>
+        </section>
+
+        <section class="mb-4">
+            <h2 class="mb-4 pb-2 border-bottom">2. Przeglądanie katalogu</h2>
+            <p>
+                W zakładce <strong>Katalog</strong> można przeglądać dostępne książki.
+                Możliwe jest filtrowanie według autora, wydawnictwa, gatunku, kategorii i innych kryteriów.
+                Klikając na przycisk szczegółów, można zobaczyć więcej informacji o danej książce:
+            </p>
+
+            <dl class="d-flex align-items-center mb-0">
+                <dt class="me-2">
+                    <i class="bi bi-info-square" aria-hidden="true"></i>
+                    <span class="visually-hidden">Przycisk Szczegóły</span>
+                </dt>
+                <dd class="mb-0">
+                    Otwiera stronę ze szczegółowymi informacjami o książce.
+                </dd>
+            </dl>
+
+        </section>
+
+        <section class="mb-4">
+            <h2 class="mb-4 pb-2 border-bottom">3. Wypożyczanie książek i prolongata</h2>
+            <p>
+                Aby wypożyczyć książkę online, należy być zalogowanym. Na stronie szczegółów książki widoczny jest przycisk
+                <strong>"Dodaj do koszyka"</strong>, jeśli egzemplarz jest dostępny. Następnie należy przejść do koszyka i wybrać <strong>"Zarezerwuj teraz"</strong>.
+                Po dokonaniu rezerwacji książka będzie przygotowana do odbioru w bibliotece następnego dnia roboczego. Książkę można również oddać bezpośrednio w bibliotece, bez oznaczania jej w systemie.
+            </p>
+
+            <p>
+                Książka jest wypożyczana na okres 30 dni, licząc od daty kliknięcia przycisku <strong>"Wypożycz"</strong>.
+                Czytelnik może wypożyczyć maksymalnie 3 książki naraz. Możliwa jest jednorazowa prolongata o 30 dni.
+            </p>
+
+            <p>
+                Lista aktualnych wypożyczeń widoczna jest po zalogowaniu, klikając w swoje imię.
+                Widoczne są tam daty wypożyczenia, planowanego zwrotu i ewentualne kary za przetrzymanie książki oraz możliwość prolongaty lub oznaczenia książki do zwrotu.
+            </p>
+        </section>
+
+        <section class="mb-4">
+            <h2 class="mb-4 pb-2 border-bottom">4. Zwrot książek</h2>
+            <p>
+                Zwrot książki odbywa się fizycznie w bibliotece. Aby zwrócić książkę, przejdź do listy wypożyczeń klikając w swoje imię i kliknij <strong>"Zwrot"</strong> obok wybranej książki.
+                Po oznaczeniu książki do zwrotu, czytelnik ma 3 dni na dostarczenie książki - po tym czasie książka zostanie oznaczona jako przetrzymana.
+                Książkę można również oddać bezpośrednio w bibliotece, bez oznaczania jej w systemie.
+                <span class="danger">W przypadku przetrzymania książki po terminie zwrotu naliczana jest kara w wysokości 1 PLN za każdy dzień opóźnienia.</span>
+            </p>
+        </section>
+
+        <section class="mb-5">
+            <h2 class="mb-4 pb-2 border-bottom">5. Opcje dostępności</h2>
+            <p>
+                Aby zmienić rozmiar wyświetlanej czcionki lub kolor motywu, skorzystaj z przycisków na pasku nawigacji:
+                <dl>
+                    <div class="d-flex align-items-center mb-2">
+                        <dt class="me-3">
+                            <i class="bi bi-type fs-5" aria-hidden="true"></i>
+                            <span class="visually-hidden">Przycisk zmiany czcionki</span>
+                        </dt>
+                        <dd class="mb-0">Zmiana wielkości czcionki</dd>
+                    </div>
+
+                    <div class="d-flex align-items-center mb-2">
+                        <dt class="me-3">
+                            <i class="bi bi-palette-fill fs-5" aria-hidden="true"></i>
+                            <span class="visually-hidden">Przycisk zmiany motywu</span>
+                        </dt>
+                        <dd class="mb-0">Zmiana koloru motywu (niebieski lub zielony)</dd>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <dt class="me-3">
+                            <i class="bi bi-highlights fs-5" aria-hidden="true"></i>
+                            <span class="visually-hidden">Przycisk wysokiego kontrastu</span>
+                        </dt>
+                        <dd class="mb-0">Motyw "wysoki kontrast"</dd>
+                    </div>
+                </dl>
+            </p>
+
+            <p>
+                Mapa strony dostępna jest w zakładce <a href="/mapa-strony">MAPA STRONY</a>.
+            </p>
+
+            <p>
+                Aby wyczyścić ciasteczka i pamięć podręczną katalogu, skorzystaj z przycisku <strong>"Czyszczenie pamięci"</strong> na dole strony.
+                Takie odświeżenie pomaga załadować najnowsze dane oraz często rozwiązuje problemy z ładowaniem strony lub logowaniem.
+            </p>
+        </section>
+
+        <section class="mb-5">
+            <h2 class="mb-4 pb-2 border-bottom">6. Asystent czytelnika - czatbot</h2>
+            <p>Asystent czytelnika pomaga w poruszaniu się po stronie. Aby skorzystać z asystenta, kliknij w dymek czatu i napisz wiadomość. 
+                Asystent korzysta ze sztucznej inteligencji i odpowiada na pytania związane z literaturą oraz naszą biblioteką. 
+                Pomoże znaleźć książkę, sprawdzić jej dostępność, zna listę lektur oraz informacje na temat biblioteki.
+                Asystent odpowiada w języku, w jakim do niego napisano (np. polski, angielski, ukraiński).</p>
+        </section>
+
+        <section class="mb-5">
+            <h2 class="mb-4 pb-2 border-bottom">7. Informacje o bibliotece</h2>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h4 class="h5 mb-3 fw-bold"><i class="bi bi-building me-2"></i>Dane kontaktowe</h4>
+
+                    <address style="font-style: normal;" class="text-secondary">
+                        <div class="d-flex mb-3">
+                            <i class="bi bi-geo-alt-fill me-3 fs-5" aria-hidden="true"></i>
+                            <div>
+                                <strong>Biblioteka Szkoły Podstawowej nr 123 w Testach</strong><br />
+                                ul. Fikcyjna 45<br />
+                                00-123 Testy
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-telephone-fill me-3 fs-5" aria-hidden="true"></i>
+                            <a href="tel:+48123456789" class="text-decoration-none text-body">
+                                +48 123 456 789
+                            </a>
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-envelope-fill me-3 fs-5" aria-hidden="true"></i>
+                            <a href="mailto:biblioteka@sp123testy.edu.pl" class="text-decoration-none text-body">
+                                biblioteka@sp123testy.edu.pl
+                            </a>
+                        </div>
+                    </address>
+                </div>
+
+                <div class="col-md-6">
+                    <h4 class="h5 mb-3 fw-bold"><i class="bi bi-clock me-2"></i>Dni i godziny otwarcia</h4>
+
+                    <dl class="mb-0">
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <dt class="fw-normal">Poniedziałek:</dt>
+                            <dd class="mb-0 fw-bold">07:30 – 12:30</dd>
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <dt class="fw-normal">Wtorek:</dt>
+                            <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <dt class="fw-normal">Środa:</dt>
+                            <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <dt class="fw-normal">Czwartek:</dt>
+                            <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <dt class="fw-normal">Piątek:</dt>
+                            <dd class="mb-0 fw-bold">09:00 – 14:00</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5">
+            <h2 class="mb-4 pb-2 border-bottom">Potrzebujesz dodatkowej pomocy?</h2>
+            <p>
+                Jeśli napotkasz problemy techniczne lub nie wiesz jak skorzystać z systemu, zgłoś się do biblioteki szkolnej
+                lub wyślij wiadomość na adres: <strong><a href="mailto:biblioteka@sp123testy.edu.pl">biblioteka@sp123testy.edu.pl</a></strong>.
+            </p>
+        </section>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

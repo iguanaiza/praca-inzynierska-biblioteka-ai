@@ -1,0 +1,165 @@
+﻿@inject IJSRuntime JS
+
+ <li class="nav-item mx-2 dropdown">
+
+
+    <button class="nav-link theme-font-color btn btn-nav"
+
+            data-bs-toggle="dropdown"
+
+            aria-expanded="false"
+
+            aria-label="Wybierz rozmiar czcionki">
+
+        <i class="bi bi-type" aria-hidden="true"></i>
+
+    </button>
+
+
+    <ul class="dropdown-menu theme-font-color dropdown-menu-end p-2">
+
+
+        <li class="d-flex justify-content-center align-items-center px-2">
+
+
+            <button class="font-picker-btn font-small mx-1"
+
+                    title="Mała czcionka"
+
+                    aria-label="Wybierz małą czcionkę"
+
+                    @onclick='() => SetFontSize("font-small")'>
+
+                Aa
+
+            </button>
+
+
+            <button class="font-picker-btn font-normal mx-1"
+
+                    title="Normalna czcionka"
+
+                    aria-label="Wybierz normalną czcionkę"
+
+                    @onclick='() => SetFontSize("font-normal")'>
+
+                Aa
+
+            </button>
+
+
+            <button class="font-picker-btn font-large mx-1"
+
+                    title="Duża czcionka"
+
+                    aria-label="Wybierz dużą czcionkę"
+
+                    @onclick='() => SetFontSize("font-large")'>
+
+                Aa
+
+            </button>
+
+        </li>
+
+    </ul>
+
+</li>
+
+
+<li class="nav-item mx-2 dropdown">
+
+
+    <button class="nav-link theme-font-color btn btn-nav"
+
+            data-bs-toggle="dropdown"
+
+            aria-expanded="false"
+
+            aria-label="Wybierz motyw kolorystyczny">
+
+        <i class="bi bi-palette-fill" aria-hidden="true"></i>
+
+    </button>
+
+
+    <ul class="dropdown-menu dropdown-menu-end p-2">
+
+
+        <li class="d-flex justify-content-center align-items-center px-2">
+
+
+            <button class="theme-picker-dot theme-dot-green mx-1"
+
+                    title="Zielony"
+
+                    aria-label="Wybierz motyw zielony"
+
+                    @onclick='() => SetTheme("theme-green")'>
+
+            </button>
+
+
+            <button class="theme-picker-dot theme-dot-blue mx-1"
+
+                    title="Niebieski"
+
+                    aria-label="Wybierz motyw niebieski"
+
+                    @onclick='() => SetTheme("theme-blue")'>
+
+            </button>
+
+
+            <button class="theme-picker-dot theme-dot-orange mx-1"
+
+                    title="Pomarańczowy"
+
+                    aria-label="Wybierz motyw pomarańczowy"
+
+                    @onclick='() => SetTheme("theme-orange")'>
+
+            </button>
+
+
+            <button class="theme-picker-dot theme-dot-gray mx-1"
+
+                    title="Szary"
+
+                    aria-label="Wybierz motyw szary"
+
+                    @onclick='() => SetTheme("theme-gray")'>
+
+            </button>
+
+
+        </li>
+
+    </ul>
+
+</li>
+
+
+<li class="nav-item mx-2">
+
+    <button class="nav-link theme-font-color btn btn-nav" @onclick="ToggleContrast" aria-label="Ustaw wysoki kontrast">
+
+        <i class="bi bi-highlights" aria-hidden="true"></i>
+
+    </button>
+
+</li> 
+
+@code {
+    private async Task ToggleContrast() => await JS.InvokeVoidAsync("toggleContrast");
+
+    private async Task SetFontSize(string fontSizeName)
+    {
+        await JS.InvokeVoidAsync("window.setFontSize", fontSizeName);
+    }
+
+    private async Task SetTheme(string themeName)
+    {
+        await JS.InvokeVoidAsync("window.setTheme", themeName);
+    }
+}

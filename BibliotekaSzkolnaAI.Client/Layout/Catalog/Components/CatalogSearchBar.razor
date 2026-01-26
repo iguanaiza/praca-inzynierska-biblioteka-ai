@@ -1,0 +1,83 @@
+﻿@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="card shadow mb-4 mt-4 border-1">
+    <div class="d-flex justify-content-center">
+        <div class="card-body p-4">
+
+            <nav class="d-flex flex-wrap justify-content-center p-4 gap-3" aria-label="Główne menu katalogu">
+                <a class="btn btn-lg btn-primary"href="/">
+                    <i class="bi bi-house me-2" aria-hidden="true"></i > Strona główna
+                </a>
+                <a class="btn btn-lg btn-primary" href="/katalog">
+                    <i class="bi bi-book me-2" aria-hidden="true"></i> Katalog
+                </a>
+                <a class="btn btn-lg btn-primary" href="/lektury">
+                    <i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i> Lektury
+                </a>
+
+                <a class="btn btn-lg btn-primary" href="/podreczniki">
+                    <i class="bi bi-journals me-2" aria-hidden="true"></i> Podręczniki
+                </a>
+            </nav>
+
+            <div class="d-flex justify-content-center p-4">
+                <div class="search-container d-flex align-items-center gap-4">
+                    <img id="search-logo" src="/images/katalog.png" class="books-icon" alt="">
+
+                    <search>
+                        <h2 class="mb-3 text-center theme-font-col-pri" id="search-heading">Katalog Online</h2>
+
+                        <form @onsubmit="OnFormSubmit" role="search">
+                            <div class="d-flex">
+                                <input id="searchbar" class="form-control me-2" type="search" placeholder="Szukaj w katalogu"
+                                       aria-labelledby="search-heading"
+                                       @bind="SearchTerm">
+
+                                <button id="search-button" class="btn btn-lg btn-primary text-nowrap" type="submit" aria-label="Szukaj w katalogu">
+                                    <i class="bi bi-search" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </search>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string SearchTerm { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!e.Location.Contains("/szukaj", StringComparison.OrdinalIgnoreCase))
+        {
+            SearchTerm = "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnFormSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            return;
+        }
+
+        var encodedTerm = Uri.EscapeDataString(SearchTerm);
+        Navigation.NavigateTo($"/szukaj/?searchTerm={encodedTerm}");
+
+        await Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleLocationChanged;
+    }
+}

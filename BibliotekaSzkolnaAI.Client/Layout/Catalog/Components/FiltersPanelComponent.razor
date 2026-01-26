@@ -1,0 +1,69 @@
+﻿<div class="d-flex justify-content-between gap-2 mb-4">
+    <button class="btn btn-outline-secondary btn-sm w-50" @onclick="ClearFilters">
+        <i class="bi bi-trash"></i> Wyczyść
+    </button>
+    <button class="btn btn-primary btn-sm w-50" @onclick="ApplyFilters">
+        <i class="bi bi-check-lg"></i> Zastosuj
+    </button>
+</div>
+
+<form @onsubmit:preventDefault>
+
+    <CollapsibleFilterList Title="Kategoria"
+                           Items="filterOptions.Categories"
+                           SelectedItems="queryParams.BookCategories"
+                           Prefix="cat" />
+
+    <CollapsibleFilterList Title="Gatunek"
+                           Items="filterOptions.Genres"
+                           SelectedItems="queryParams.BookGenres"
+                           Prefix="gen" />
+
+    <CollapsibleFilterList Title="Autor"
+                           Items="filterOptions.Authors"
+                           SelectedItems="queryParams.BookAuthors"
+                           Prefix="auth"
+                           MaxVisibleCount="5" />
+
+    <CollapsibleFilterList Title="Wydawca"
+                           Items="filterOptions.Publishers"
+                           SelectedItems="queryParams.BookPublishers"
+                           Prefix="pub" />
+
+    <CollapsibleFilterList Title="Seria"
+                           Items="filterOptions.Series"
+                           SelectedItems="queryParams.BookSeries"
+                           Prefix="ser" />
+
+    <CollapsibleFilterList Title="Typ"
+                           Items="filterOptions.Types"
+                           SelectedItems="queryParams.BookTypes"
+                           Prefix="typ" />
+
+</form>
+
+@code {
+    [Parameter, EditorRequired] public FilterOptionsDto filterOptions { get; set; } = new();
+    [Parameter, EditorRequired] public BookQueryParams queryParams { get; set; } = new();
+    [Parameter, EditorRequired] public EventCallback OnApplyFilters { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnClearFilters { get; set; }
+
+    private async Task ApplyFilters() => await OnApplyFilters.InvokeAsync();
+
+    private async Task ClearFilters()
+    {
+        queryParams.BookCategories.Clear();
+        queryParams.BookGenres.Clear();
+        queryParams.BookAuthors.Clear();
+        queryParams.BookPublishers.Clear();
+        queryParams.BookSeries.Clear();
+        queryParams.BookTypes.Clear();
+        queryParams.BookSpecialTags?.Clear();
+
+        queryParams.Title = null;
+        queryParams.Isbn = null;
+        queryParams.Year = null;
+
+        await OnClearFilters.InvokeAsync();
+    }
+}

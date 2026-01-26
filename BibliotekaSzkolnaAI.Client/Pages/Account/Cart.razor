@@ -1,0 +1,221 @@
+﻿@page "/konto/koszyk"
+@layout CatalogLayout
+@attribute [Authorize]
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IConfiguration Configuration
+@inject GlobalUiService UI
+
+<PageTitle>Koszyk rezerwacji</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie koszyka" />
+        <p><em>Ładowanie koszyka...</em></p>
+    </div>
+}
+else
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom">Koszyk rezerwacji</h1>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger m-3" role="alert">@errorMessage</div>
+        }
+
+        else if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success m-3" role="alert">@successMessage</div>
+        }
+        else if (cartItems == null || !cartItems.Any())
+        {
+            <div class="alert alert-info m-3" role="alert">
+                Twój koszyk rezerwacji jest pusty.
+            </div>
+        }
+        else
+        {
+            <div class="container mt-3 pb-3">
+
+                <div class="row mb-3 g-2">
+                    <div class="col-12 col-md-6">
+                        <button class="btn btn-outline-primary w-100" @onclick="ClearCartAsync">
+                            <i class="bi bi-trash"></i> Wyczyść cały koszyk
+                        </button>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <button class="btn btn-primary w-100" @onclick="FinalizeCartAsync">
+                            <i class="bi bi-check-all"></i> Zarezerwuj teraz (@cartItems.Count)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    @foreach (var item in cartItems)
+                    {
+                        <div class="col-12 theme-font-col-pri">
+                            <div class="card shadow-sm">
+                                <div class="row g-0">
+                                    <div class="col-3 col-md-2 d-flex justify-content-center align-items-center p-2">
+                                        <img src="@(GetFullImageUrl(item.CoverImageUrl))" onError="this.onerror=null; this.src='/images/placeholder.png';" alt="Okładka: @item.Title" class="img-fluid rounded-start img-catalog">
+                                    </div>
+
+                                    <div class="col-9 col-md-10">
+                                        <div class="card-body d-flex flex-column h-100 p-2 p-md-3">
+                                            <div>
+                                                <h5 class="card-title theme-font-col-pri">@item.Title</h5>
+                                                <p class="card-text"><small>@item.Author</small></p>
+                                                <p class="card-text small">Dodano: @item.AddedAt.ToLocalTime().ToString("g")</p>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2">
+                                                <a href="/katalog/szczegoly/@item.BookId?ReturnUrl=/konto/koszyk" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-info-square"></i> Szczegóły
+                                                </a>
+
+                                                <button class="btn btn-outline-primary btn-sm" @onclick="() => RemoveFromCartAsync(item.Id, item.Title)">
+                                                    <i class="bi bi-trash"></i> Usuń z koszyka
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool IsLoading = true;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private List<ReservationGetDto> cartItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCartAsync();
+    }
+
+    private async Task LoadCartAsync()
+    {
+        IsLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            cartItems = await Http.GetFromJsonAsync<List<ReservationGetDto>>("api/bookreservation/cart");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd podczas ładowania koszyka: {ex.Message}";
+            cartItems = new List<ReservationGetDto>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task RemoveFromCartAsync(int cartItemId, string bookTitle)
+    {
+        bool confirmed = await UI.ConfirmAsync("Usuwanie z koszyka", $"Czy na pewno chcesz usunąć '{bookTitle}' z koszyka?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/bookreservation/remove/{cartItemId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var itemToRemove = cartItems.FirstOrDefault(i => i.Id == cartItemId);
+                if (itemToRemove != null)
+                {
+                    UI.ShowToast("Książka została usunięta z koszyka.", "success");
+                    cartItems.Remove(itemToRemove);
+                }
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się usunąć: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    private async Task ClearCartAsync()
+    {
+        bool confirmed = await UI.ConfirmAsync("Usuwanie koszyka", "Czy na pewno chcesz opróżnić cały koszyk?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync("api/bookreservation/clear");
+            if (response.IsSuccessStatusCode)
+            {
+                UI.ShowToast("Opróżniono koszyk.", "success");
+                cartItems.Clear();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się opróżnić koszyka: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    private async Task FinalizeCartAsync()
+    {
+        bool confirmed = await UI.ConfirmAsync("Usuwanie koszyka", "Czy na pewno chcesz sfinalizować rezerwację?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.PostAsync("api/bookreservation/finalize", null);
+            if (response.IsSuccessStatusCode)
+            {
+                cartItems.Clear();
+                UI.ShowToast("Rezerwacja zakończona pomyślnie! Zamówienie czeka na akceptację w bibliotece.", "success");
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                UI.ShowToast($"Nie udało się sfinalizować rezerwacji: {errorMsg}", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+        }
+    }
+
+    private string GetFullImageUrl(string relativePath)
+    {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7069";
+        return $"{apiBaseUrl}{relativePath}";
+    }
+}

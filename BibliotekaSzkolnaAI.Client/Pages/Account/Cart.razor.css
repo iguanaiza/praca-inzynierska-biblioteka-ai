@@ -1,0 +1,24 @@
+﻿.truncate-3-lines {
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* liczba linii */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.book-cover-container {
+    width: 12rem;
+    height: 11.25rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.book-cover-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    display: block;
+}

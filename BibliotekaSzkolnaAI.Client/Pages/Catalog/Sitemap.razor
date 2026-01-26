@@ -1,0 +1,41 @@
+﻿@page "/mapa-strony"
+@layout CatalogLayout
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Mapa strony katalogu biblioteki SP 123 w Testach</PageTitle>
+
+<div class="card shadow border-0 theme-font-col-pri">
+    <div class="card-header bg-theme bg-gradient py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom">Mapa strony</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <nav aria-label="Główna mapa strony">
+            <ul>
+                <li><a href="/">Strona główna</a></li>
+                <li><a href="/katalog">Katalog książek</a></li>
+                <li><a href="/lektury">Lista lektur</a></li>
+                <li><a href="/podreczniki">Lista podręczników</a></li>
+                <li><a href="/kontakt">Kontakt i godziny otwarcia</a></li>
+                <li><a href="/pomoc">Pomoc</a></li>
+                <li><a href="/mapa-strony" aria-current="page">Mapa strony</a></li>
+                <li><a href="/konto/zaloguj">Logowanie</a></li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

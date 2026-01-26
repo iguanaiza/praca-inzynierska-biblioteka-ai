@@ -1,0 +1,126 @@
+﻿.carousel-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: 1rem 2rem;
+}
+
+.carousel-container {
+    display: flex;
+    max-width: 25rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    gap: 1rem;
+    padding: 1rem 0;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+}
+
+.book-card {
+    flex: 0 0 auto;
+    width: 7.5rem;
+    height: 12.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: var(--secondary-25);
+    border-radius: 0.5rem;
+    box-shadow: 0 0 0.25rem rgba(0, 0, 0, 0.1);
+    scroll-snap-align: start;
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+    .book-card:hover {
+        transform: scale(1.05);
+    }
+
+.book-cover-container {
+    max-height: 11.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.book-cover {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    padding: 0.125rem; /* 2px */
+}
+
+.book-title {
+    padding: 0.5rem;
+    font-size: var(--font-size);
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3rem;
+    height: 3.9rem; /* 3 * 1.3rem */
+}
+
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--primary-50);
+    color: white;
+    border: none;
+    font-size: 2rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.3s;
+}
+
+    .carousel-btn:hover {
+        background: var(--primary-75);
+    }
+
+    .carousel-btn.left {
+        left: 0.5rem;
+    }
+
+    .carousel-btn.right {
+        right: 0.5rem;
+    }
+
+@media (min-width: 700px) {
+    .carousel-container {
+        max-width: 50rem;
+    }
+}
+
+@media (min-width: 900px) {
+    .book-card {
+        width: 12rem;
+        height: 15rem;
+    }
+
+    .carousel-container {
+        max-width: 60rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    .carousel-container {
+        max-width: 65rem;
+    }
+}
+
+@media (min-width: 1500px) {
+    .carousel-container {
+        max-width: 75rem;
+    }
+}
+
+@media (min-width: 1600px) {
+    .carousel-container {
+        max-width: 100%;
+    }
+}

@@ -1,0 +1,91 @@
+﻿@page "/kontakt"
+@layout CatalogLayout
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Kontakt z Biblioteką SP 123 w Testach</PageTitle>
+
+<div class="card shadow border-0 theme-font-col-pri">
+    <div class="card-header bg-theme bg-gradient py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="h2-custom">Informacje o bibliotece</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-3 p-4">
+        <div class="col-md-4">
+            <h2>Dane kontaktowe</h2>
+            <address style="font-style: normal;" class="text-secondary">
+                <div class="d-flex mb-3">
+                    <i class="bi bi-geo-alt-fill me-3 fs-5" aria-hidden="true"></i>
+                    <div>
+                        <strong>Biblioteka Szkoły Podstawowej nr 123 w Testach</strong><br />
+                        ul. Fikcyjna 45<br />
+                        00-123 Testy
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-telephone-fill me-3 fs-5" aria-hidden="true"></i>
+                    <a href="tel:+48123456789" class="text-decoration-none text-body">
+                        +48 123 456 789
+                    </a>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-envelope-fill me-3 fs-5" aria-hidden="true"></i>
+                    <a href="mailto:biblioteka@sp123testy.edu.pl" class="text-decoration-none text-body">
+                        biblioteka@sp123testy.edu.pl
+                    </a>
+                </div>
+            </address>
+        </div>
+
+        <div class="col-md-4">
+            <h2>Dni i godziny otwarcia</h2>
+            <dl class="mb-0">
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <dt class="fw-normal">Poniedziałek:</dt>
+                    <dd class="mb-0 fw-bold">07:30 – 12:30</dd>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <dt class="fw-normal">Wtorek:</dt>
+                    <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <dt class="fw-normal">Środa:</dt>
+                    <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <dt class="fw-normal">Czwartek:</dt>
+                    <dd class="mb-0 fw-bold">08:00 – 13:30</dd>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <dt class="fw-normal">Piątek:</dt>
+                    <dd class="mb-0 fw-bold">09:00 – 14:00</dd>
+                </div>
+            </dl><br/>
+            <p>Zapraszamy!</p>
+        </div>
+
+        <div class="col-md-4 text-center">
+            <img src="/images/biblioteka.jpg" alt="Wnętrze biblioteki szkolnej" class="img-fluid rounded shadow-sm" />
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("applyUserPreferences");
+        }
+    }
+}

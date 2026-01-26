@@ -1,0 +1,25 @@
+﻿@inherits LayoutComponentBase
+@layout MainLayout
+
+<div class="d-flex flex-column min-vh-100 w-100">
+
+    <header class="sticky-top">
+        <CatalogNavbar />
+    </header>
+
+    <main class="w-100 mb-4 flex-grow-1">
+        <div class="mx-auto px-3 catalog-width">
+            <CatalogSearchBar/>
+            @Body
+        </div>
+    </main>
+
+    <footer>
+        <CatalogFooter />
+    </footer>
+
+</div>
+
+<aside>
+    <ChatBotLayout />
+</aside>

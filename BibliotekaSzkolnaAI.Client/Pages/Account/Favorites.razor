@@ -1,0 +1,207 @@
+﻿@page "/konto/ulubione"
+@layout CatalogLayout
+@attribute [Authorize]
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IConfiguration Configuration
+@inject GlobalUiService UI
+
+<PageTitle>Ulubione książki</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="text-center" role="status">
+        <img src="/images/loading-book.gif" alt="Ładowanie katalogu" />
+        <p><em>Ładowanie katalogu...</em></p>
+    </div>
+}
+
+else 
+{
+    <div class="card shadow border-0">
+        <div class="card-header bg-theme bg-gradient ml-0 py-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="h2-custom">Ulubione książki</h1>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger m-3">@errorMessage</div>
+        }
+
+        else if (pagedResult == null || !pagedResult.Items.Any())
+        {
+            <div class="alert alert-info m-3">
+                Nie masz jeszcze żadnych ulubionych książek.
+            </div>
+        }
+
+        else
+        {
+            <div class="container mt-3 pb-3">
+                <div class="row g-3">
+
+                    @foreach (var book in pagedResult.Items)
+                    {
+                        <div class="col-12 col-md-6">
+                            <div class="card h-100 shadow-sm">
+                                <div class="row g-0 h-100">
+
+                                    <div class="col-md-4 d-flex justify-content-center align-items-center p-3">
+                                        <img src="@(GetFullImageUrl(book.ImageUrl))" onError="this.onerror=null; this.src='/images/placeholder.png';" alt="Okładka: @book.Title" class="img-fluid rounded-start img-catalog">
+                                    </div>
+
+                                    <div class="col-md-8 theme-font-col-pri">
+                                        <div class="card-body d-flex flex-column h-100">
+
+                                            <div>
+                                                <h2 class="card-title">@book.Title</h2>
+                                                <p class="card-text"><small>@book.Author</small></p>
+
+                                                <p class="card-text truncate-3-lines mb-3">
+                                                    @book.Description
+                                                </p>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mt-auto">
+
+                                                <a href="/katalog/szczegoly/@book.BookId?ReturnUrl=/konto/ulubione" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-info-square"></i> Szczegóły
+                                                </a>
+
+                                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveFromFavorites(book.BookId)">
+                                                    <i class="bi bi-trash"></i> Usuń
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (pagedResult.TotalPages > 1)
+                {
+                    <div class="row mt-4">
+                        <div class="col-12 d-flex justify-content-between align-items-center">
+                            <button class="btn btn-primary"
+                                    disabled="@(!pagedResult.HasPreviousPage)"
+                                    @onclick="() => OnPageChanged(pagedResult.PageNumber - 1)">
+                                <i class="bi bi-chevron-left"></i> Poprzednia
+                            </button>
+
+                            <span>
+                                Strona <strong>@pagedResult.PageNumber</strong> z <strong>@pagedResult.TotalPages</strong>
+                            </span>
+
+                            <button class="btn btn-primary"
+                                    disabled="@(!pagedResult.HasNextPage)"
+                                    @onclick="() => OnPageChanged(pagedResult.PageNumber + 1)">
+                                Następna <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool IsLoading = true;
+    private string? errorMessage;
+
+    private PagedResult<FavoriteBookGetDto>? pagedResult;
+
+    private FavoriteQueryParams queryParams = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFavorites();
+    }
+
+    private async Task LoadFavorites()
+    {
+        IsLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var queryString = $"?PageNumber={queryParams.PageNumber}&PageSize={queryParams.PageSize}";
+            if (!string.IsNullOrEmpty(queryParams.SearchTerm))
+            {
+                queryString += $"&SearchTerm={Uri.EscapeDataString(queryParams.SearchTerm)}";
+            }
+
+            pagedResult = await Http.GetFromJsonAsync<PagedResult<FavoriteBookGetDto>>($"api/favorites{queryString}")
+              ?? new PagedResult<FavoriteBookGetDto>();
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            errorMessage = "Wystąpił błąd podczas ładowania ulubionych. Upewnij się, że jesteś zalogowany.";
+            pagedResult = new PagedResult<FavoriteBookGetDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Nieznany błąd: {ex.Message}";
+            pagedResult = new PagedResult<FavoriteBookGetDto>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task RemoveFromFavorites(int bookId)
+    {
+        bool confirmed = await UI.ConfirmAsync("Usuwanie z ulubionych", "Czy na pewno chcesz usunąć tę książkę z ulubionych?");
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/favorites/{bookId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    UI.ShowToast("Książka została usunięta z ulubionych.", "success");
+                    await LoadFavorites();
+                }
+                else
+                {
+                    var errorMsg = await response.Content.ReadAsStringAsync();
+                    UI.ShowToast($"Nie udało się usunąć: {errorMsg}", "error");
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Wystąpił błąd podczas usuwania: {ex.Message}";
+            }
+        }
+    }
+
+    private async Task OnPageChanged(int newPageNumber)
+    {
+        if (pagedResult is null || newPageNumber < 1 || newPageNumber > pagedResult.TotalPages)
+            return;
+
+        queryParams.PageNumber = newPageNumber;
+        await LoadFavorites();
+    }
+
+    private string GetFullImageUrl(string? relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return "/images/no-cover.png";
+        }
+
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7069";
+        return $"{apiBaseUrl}{relativePath}";
+    }
+}
