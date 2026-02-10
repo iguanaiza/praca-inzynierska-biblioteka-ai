@@ -1,3 +1,5 @@
+Wersja live: https://biblioteka-www-prod-ajbch6bpdte8ejem.polandcentral-01.azurewebsites.net/
+
 # Cele i założenia projektu
 Celem projektu jest utworzenie systemu webowego do obsługi szkolnej biblioteki i możliwości przeglądania zasobów online, umożliwiającego bezproblemowe rozbudowanie go w przyszłości. System składa się z dwóch podsystemów – katalogu biblioteki oraz panelu zarządza-nia, każdy z dedykowanym interfejsem użytkownika. Dostęp do danego systemu i jego funkcjonal-ności zależy od roli użytkownika, sam katalog jest dostępny bez logowania, ale ograniczając pewne funkcjonalności (np. rezerwacja książki).
 Aplikacja jest dostosowana pod czytniki ekranowe oraz oferuje opcje dostępności zgodne z WCAG 2.1  i opcje ułatwiające poruszanie się po stronie takie, jak: 
