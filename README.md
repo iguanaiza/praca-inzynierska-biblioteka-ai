@@ -1,5 +1,5 @@
 Azure live: https://biblioteka-www-prod-ajbch6bpdte8ejem.polandcentral-01.azurewebsites.net/
-
+PowerPoint presentation: https://1drv.ms/p/c/b1967363a0c8f96c/IQBpwQMWwNHaQLohi6bBiOiEAddq2yQgt7wIRkbla8FkBZs?e=qiEKIx
 
 EN
 # Project Objectives and Assumptions
