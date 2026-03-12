@@ -50,6 +50,9 @@ A key component of the project is the intelligent assistant module, built on the
 
 The analytical phase of the project included system modeling in the Visual Paradigm tool, where use case diagrams and sequence diagrams were developed.
 
+## Project documentation
+**Partial project documentation** in polish is available in the file [Biblioteka_docs_PL.pdf](https://github.com/iguanaiza/praca-inzynierska-biblioteka-ai/blob/master/Biblioteka_docs_PL.pdf). 
+Full version can be sent on request for job recruitment process.
 
 PL
 # Cele i założenia projektu
@@ -93,3 +96,7 @@ Kluczowym komponentem projektu jest moduł inteligentnego asystenta, zbudowany w
 -	Dane statyczne: Wykorzystano usługę Azure AI Search do indeksowania statycznej bazy wiedzy (plik DOCX), zawierającej informacje instytucjonalne, procedury i instrukcje.
 
 Faza analityczna projektu obejmowała modelowanie systemu w narzędziu Visual Paradigm, w ramach którego opracowano diagramy przypadków użycia i diagramy sekwencji.
+
+## Dokumentacja projektu
+**Fragment dokumentacji** jest dostępny w pliku [Biblioteka_docs_PL.pdf](https://github.com/iguanaiza/praca-inzynierska-biblioteka-ai/blob/master/Biblioteka_docs_PL.pdf). 
+Pełna wersja może zostać udostępniona podczas rekrutacji.
